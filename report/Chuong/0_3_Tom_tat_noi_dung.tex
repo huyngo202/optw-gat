@@ -1,0 +1,21 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\begin{center}
+    \Large{\textbf{TÓM TẮT NỘI DUNG KHÓA LUẬN}}\\
+\end{center}
+\vspace{1cm}
+
+Bài toán Định hướng có khung thời gian (Orienteering Problem with Time Windows - OPTW) là một bài toán tối ưu hóa tổ hợp thuộc lớp NP-Hard, mang ý nghĩa thực tiễn cao trong các lĩnh vực như thiết kế lịch trình du lịch hay logistics. Các phương pháp giải quyết truyền thống như Heuristic hay Meta-heuristic thường gặp hạn chế về thời gian tính toán hoặc khả năng tổng quát hóa trên các tập dữ liệu mới. Khóa luận này đề xuất một cách tiếp cận hiện đại dựa trên Học sâu tăng cường (Deep Reinforcement Learning - DRL), sử dụng kiến trúc Pointer Network kết hợp cơ chế Attention.
+
+Đóng góp chính của khóa luận là việc đề xuất kiến trúc lai ghép (Hybrid Architecture), tích hợp mạng Graph Attention Networks (GAT) vào bộ mã hóa (Encoder) nhằm trích xuất hiệu quả các đặc trưng không gian cục bộ, kết hợp cùng Transformer/LSTM để xử lý các phụ thuộc chuỗi dài. Mô hình được huấn luyện bằng thuật toán REINFORCE có sử dụng baseline để giảm phương sai. Kết quả thực nghiệm trên các bộ dữ liệu chuẩn (Solomon, Cordeau, Gavalas) cho thấy mô hình đề xuất có khả năng sinh ra các lời giải chất lượng cao với thời gian suy diễn nhanh, đạt hiệu năng cạnh tranh và vượt trội so với mô hình cơ sở (Baseline) và Transformer thuần túy trong nhiều trường hợp.
+
+\vspace{2cm} % Tăng khoảng cách để chữ ký không bị sát
+
+\begin{flushright}
+    Sinh viên thực hiện\\
+    \vspace{2.5cm} % Thêm khoảng trống để ký tay
+    \textbf{Ngô Quang Huy}
+\end{flushright}
+
+\end{document}

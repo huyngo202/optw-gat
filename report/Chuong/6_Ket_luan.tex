@@ -1,0 +1,41 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+
+\lhead{Chương 5. Kết luận} % Thêm tiêu đề cho header trang
+
+Đồ án này đã đi sâu vào việc nghiên cứu và cải tiến một mô hình Học tăng cường sâu nhằm giải quyết hiệu quả Bài toán Orienteering có Cửa sổ Thời gian (OPTW) - một bài toán tối ưu tổ hợp có ý nghĩa quan trọng trong thực tiễn. Chương này sẽ tổng kết lại những kết quả chính đã đạt được, nhìn nhận những hạn chế còn tồn tại và đề xuất các hướng phát triển tiềm năng trong tương lai.
+
+\section{Kết luận}
+\label{sec:conclusion}
+
+Xuyên suốt quá trình thực hiện, đồ án đã giải quyết thành công các mục tiêu đề ra ban đầu. Những kết quả chính đạt được bao gồm:
+
+\begin{enumerate}
+    \item \textbf{Xây dựng thành công mô hình RL cho OPTW:} Đồ án đã triển khai một mô hình Học tăng cường dựa trên kiến trúc Pointer Network, có khả năng học và tự xây dựng các lời giải khả thi cho bài toán OPTW phức tạp. Mô hình baseline sử dụng bộ mã hóa Transformer đã cho thấy khả năng học các chính sách hiệu quả, làm nền tảng vững chắc cho các cải tiến sau này.
+
+    \item \textbf{Chứng minh hiệu quả vượt trội của kiến trúc GAT:} Cải tiến cốt lõi của đồ án là việc đề xuất và tích hợp bộ mã hóa Mạng Chú ý Đồ thị (GAT). Qua quá trình đánh giá thực nghiệm trên các bộ dữ liệu benchmark tiêu chuẩn, mô hình GAT đã cho thấy sự vượt trội rõ rệt so với mô hình Transformer. Kết quả cho thấy GAT không chỉ tạo ra các lộ trình có \textbf{tổng lợi nhuận cao hơn} mà còn có \textbf{thời gian suy luận nhanh hơn}. Điều này khẳng định mạnh mẽ luận điểm rằng việc mô hình hóa bài toán dưới dạng đồ thị giúp mô hình nắm bắt tốt hơn cấu trúc và các ràng buộc vốn có, từ đó nâng cao hiệu quả giải quyết.
+
+    \item \textbf{Xác nhận giá trị của phương pháp lai (Hybrid Approach):} Đồ án đã đề xuất kết hợp lời giải từ mô hình học sâu với thuật toán tìm kiếm cục bộ 2-Opt. Kết quả thực nghiệm cho thấy bước hậu xử lý này giúp cải thiện một cách nhất quán chất lượng của lời giải cuối cùng. Điều này chứng tỏ tiềm năng của việc kết hợp sức mạnh học biểu diễn của mạng nơ-ron và khả năng tinh chỉnh tối ưu của các thuật toán heuristic cổ điển.
+\end{enumerate}
+
+Bên cạnh những thành công đã đạt được, đồ án vẫn còn một số vấn đề tồn đọng. Quá trình huấn luyện các mô hình Học tăng cường đòi hỏi tài nguyên tính toán lớn và thời gian dài để hội tụ. Hơn nữa, mặc dù thuật toán 2-Opt có hiệu quả, nó vẫn là một phương pháp heuristic đơn giản và có thể chưa phải là lựa chọn tốt nhất để tinh chỉnh lời giải trong mọi trường hợp.
+
+\section{Hướng phát triển trong tương lai}
+\label{sec:future_work}
+
+Dựa trên những kết quả và hạn chế của đồ án, một số hướng nghiên cứu và phát triển có thể được thực hiện trong tương lai:
+
+\begin{enumerate}
+    \item \textbf{Mở rộng sang các biến thể phức tạp hơn của bài toán:} Áp dụng và cải tiến mô hình cho các biến thể khác của bài toán định tuyến như VRP với nhiều xe (Multi-vehicle VRP), VRP với khả năng tải trọng (Capacitated VRP), hay các bài toán có ràng buộc động (dynamic constraints) thay đổi theo thời gian thực.
+    
+    \item \textbf{Nghiên cứu các thuật toán tìm kiếm cục bộ tiên tiến hơn:} Thay vì 2-Opt, có thể tích hợp các thuật toán tìm kiếm cục bộ mạnh mẽ hơn như Large Neighborhood Search (LNS) hay Guided Local Search (GLS). Đặc biệt, có thể xây dựng một mô hình học máy khác để "học" cách chọn toán tử tìm kiếm cục bộ nào là hiệu quả nhất tại một trạng thái nhất định.
+
+    \item \textbf{Cải thiện hiệu quả huấn luyện:} Nghiên cứu các kỹ thuật mới để tăng tốc độ hội tụ và giảm phương sai trong quá trình huấn luyện Policy Gradient, ví dụ như sử dụng các thuật toán Actor-Critic tiên tiến hơn (A2C, A3C, PPO) hoặc các kỹ thuật học ngoại tuyến (Offline RL) để tận dụng các dữ liệu đã có.
+    
+    \item \textbf{Xây dựng một hệ thống hoàn chỉnh và triển khai thực tế:} Tích hợp mô hình đã huấn luyện vào một ứng dụng web hoặc di động hoàn chỉnh, có giao diện trực quan cho phép người dùng nhập dữ liệu bài toán và nhận về lộ trình tối ưu. Việc triển khai trong một môi trường thực tế sẽ giúp đánh giá chính xác hơn hiệu quả và tính ứng dụng của giải pháp.
+\end{enumerate}
+
+Những hướng phát triển này hứa hẹn sẽ tiếp tục đẩy mạnh giới hạn của việc áp dụng học sâu để giải quyết các bài toán tối ưu tổ hợp, mang lại những giá trị thiết thực cho cả lĩnh vực nghiên cứu và công nghiệp.
+
+\end{document}

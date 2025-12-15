@@ -1,0 +1,56 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\section{Đặt vấn đề}
+\label{sec:dvd}
+
+Trong kỷ nguyên số hóa và logistics thông minh, việc tối ưu hóa lộ trình di chuyển không chỉ là bài toán tiết kiệm chi phí mà còn là chìa khóa để nâng cao trải nghiệm khách hàng và hiệu quả vận hành. Một trong những thách thức cốt lõi trong lĩnh vực này là \textbf{Bài toán Định hướng có Khung thời gian (Orienteering Problem with Time Windows - OPTW)}. Bài toán mô phỏng kịch bản thực tế: một tác nhân (xe giao hàng, khách du lịch, drone giám sát) xuất phát từ điểm tập kết (depot), cần lựa chọn một tập con các địa điểm để ghé thăm trong giới hạn ngân sách thời gian cho phép. Mỗi địa điểm gắn liền với một "điểm thưởng" (score), thời gian phục vụ và một "khung thời gian" (time window) bắt buộc. Mục tiêu là xây dựng một lộ trình khép kín sao cho tổng điểm thưởng thu được là lớn nhất mà không vi phạm bất kỳ ràng buộc thời gian nào.
+
+OPTW thuộc lớp bài toán tối ưu tổ hợp NP-khó (NP-hard), đồng nghĩa không gian lời giải bùng nổ theo hàm mũ khi số lượng điểm tăng lên, khiến các phương pháp duyệt toàn bộ trở nên vô hiệu. Tính ứng dụng của OPTW trải rộng từ việc lập lịch trình du lịch cá nhân hóa (Tourist Trip Design Problem) đến tối ưu hóa giao vận chặng cuối. Chính vì tính phức tạp về lý thuyết và giá trị thực tiễn cao, việc nghiên cứu các phương pháp giải quyết thông minh, có khả năng thích nghi và tính toán nhanh cho OPTW là một yêu cầu cấp thiết.
+
+\section{Các giải pháp hiện tại và hạn chế}
+\label{sec:giaiphap}
+
+Các phương pháp giải quyết OPTW hiện nay chủ yếu chia thành hai nhóm:
+\begin{itemize}
+    \item \textbf{Phương pháp chính xác (Exact methods):} Như quy hoạch động hay Branch-and-Cut, đảm bảo tìm ra lời giải tối ưu toàn cục nhưng chỉ khả thi với các bộ dữ liệu nhỏ do chi phí tính toán quá lớn.
+    \item \textbf{Phương pháp Heuristic/Metaheuristic:} Như Thuật toán Di truyền (GA), Tìm kiếm Tabu (Tabu Search) hay Tìm kiếm Cục bộ lặp (ILS). Các phương pháp này cân bằng tốt hơn giữa chất lượng và thời gian, nhưng phụ thuộc nhiều vào việc thiết kế thủ công các luật (hand-crafted rules) và khó tổng quát hóa sang các phân phối dữ liệu mới.
+\end{itemize}
+
+Gần đây, phương pháp \textbf{Học Tăng cường Sâu (Deep Reinforcement Learning - DRL)} kết hợp với kiến trúc Pointer Network và Transformer đã mở ra hướng đi mới: dạy máy tính tự "học" cách xây dựng lộ trình thông qua tương tác với môi trường thay vì lập trình cứng nhắc. Mặc dù đạt được nhiều thành tựu, các kiến trúc DRL hiện tại cho OPTW vẫn tồn tại hạn chế:
+\begin{itemize}
+    \item \textbf{Khả năng trích xuất đặc trưng không gian:} Các mô hình dựa trên Transformer thuần túy thường xử lý các điểm như một tập hợp hoặc chuỗi, chưa khai thác triệt để cấu trúc tô-pô (topology) và mối quan hệ láng giềng giữa các điểm trên đồ thị.
+    \item \textbf{Vấn đề tối ưu cục bộ:} Do tính chất xây dựng lời giải theo từng bước (constructive), mô hình DRL có thể bị mắc kẹt ở các cực trị địa phương (local optima), dẫn đến lời giải chưa thực sự tinh gọn.
+\end{itemize}
+
+\section{Mục tiêu và định hướng giải pháp}
+
+Mục tiêu của khóa luận là \textbf{xây dựng và cải tiến mô hình Học tăng cường sâu để giải quyết bài toán OPTW}, tập trung vào việc nâng cao khả năng biểu diễn dữ liệu và chất lượng lời giải cuối cùng. khóa luận đề xuất các giải pháp sau:
+
+\begin{enumerate}
+    \item \textbf{Đề xuất kiến trúc mã hóa lai ghép GAT-Transformer:} Thay vì chỉ sử dụng cơ chế Self-Attention tiêu chuẩn, khóa luận tích hợp \textbf{Mạng Chú ý Đồ thị (Graph Attention Network - GAT)} vào bộ mã hóa (Encoder). GAT cho phép mô hình tập trung vào các mối quan hệ cục bộ giữa các điểm lân cận khả thi, giúp nắm bắt tốt hơn cấu trúc không gian của bài toán.
+    
+    \item \textbf{Chiến lược tinh chỉnh bằng Tìm kiếm cục bộ (Local Search):} Để khắc phục nhược điểm của phương pháp xây dựng (constructive), khóa luận áp dụng cơ chế lai (hybrid): sử dụng mô hình DRL để sinh ra lời giải khung chất lượng cao trong thời gian ngắn, sau đó tinh chỉnh bằng thuật toán tìm kiếm cục bộ (như 2-Opt/ILS) để tối ưu hóa cục bộ và gia tăng tổng điểm thưởng.
+\end{enumerate}
+
+\section{Đóng góp của khóa luận}
+
+Đóng góp chính của khóa luận bao gồm:
+\begin{enumerate}
+    \item Hiện thực hóa mô hình Học tăng cường sâu dựa trên kiến trúc Pointer Network để giải quyết bài toán OPTW với các ràng buộc thời gian phức tạp.
+    \item Đề xuất kiến trúc Encoder cải tiến sử dụng lớp GATConv, chứng minh thực nghiệm rằng việc tích hợp thông tin đồ thị giúp cải thiện hiệu năng so với kiến trúc Transformer cơ sở trên các tập dữ liệu có cấu trúc cụm (clustered).
+    \item Xây dựng quy trình đánh giá toàn diện, so sánh hiệu năng giữa các mô hình (Baseline, Transformer, GAT-Hybrid) và đánh giá hiệu quả của chiến lược kết hợp tìm kiếm cục bộ trên các bộ benchmark chuẩn (Solomon, Cordeau, Gavalas).
+\end{enumerate}
+
+\section{Bố cục khóa luận}
+Phần còn lại của báo cáo được tổ chức như sau:
+
+\textbf{Chương 2} trình bày cơ sở lý thuyết, bao gồm định nghĩa toán học của OPTW, nguyên lý Học tăng cường (Policy Gradient), và kiến trúc mạng nơ-ron Pointer Network, Transformer và GAT.
+
+\textbf{Chương 3} mô tả chi tiết phương pháp đề xuất, tập trung vào kiến trúc mô hình lai ghép GAT-Transformer, quy trình huấn luyện REINFORCE với baseline và thuật toán tìm kiếm cục bộ.
+
+\textbf{Chương 4} trình bày thiết lập thực nghiệm, mô tả bộ dữ liệu, các tham số huấn luyện và phân tích kết quả so sánh giữa các mô hình về điểm thưởng và thời gian suy diễn.
+
+\textbf{Chương 5} tổng kết các kết quả đạt được, nhìn nhận các hạn chế và đề xuất hướng phát triển trong tương lai.
+
+\end{document}

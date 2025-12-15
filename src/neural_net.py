@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
+import torch.utils.checkpoint as checkpoint
 
 import math
 import numpy as np
@@ -13,7 +14,7 @@ import numpy as np
 
 class ScaledDotProductAttention(nn.Module):
     def __init__(self, d_k):
-        super(ScaledDotProductAttention, self).__init__()
+        super(ScaledDotProductAttention, self).__init__()                                                                                                                                                                                                                                                                                                        
         self.scale_factor = np.sqrt(d_k)
         self.softmax = nn.Softmax(dim=-1)
 

@@ -1,0 +1,11 @@
+Instance,Model,Score,Inference Time (ms)
+c101,Baseline,320,1475
+c101,Transformer PPO,60,516
+r101,Baseline,198,1540
+r101,Transformer PPO,69,522
+rc101,Baseline,219,1871
+rc101,Transformer PPO,76,549
+pr01,Baseline,299,1203
+pr01,Transformer PPO,89,333
+t101,Baseline,318,5016
+t101,Transformer PPO,144,2797

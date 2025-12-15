@@ -9,11 +9,12 @@ import torch
 from torch import optim
 
 import src.config as cf
-import src.utils as u
+# CHANGED: Use fixed utils
+import src.utils_transformer as u
 import src.train_utils as tu
 import src.sampling_norm_utils as snu
 from src.neural_net import RecPointerNetwork
-from src.hybrid_neural_net import HybridPointerNetwork
+# from src.hybrid_neural_net import HybridPointerNetwork
 from src.solution_construction import RunEpisode
 
 # for logging
@@ -241,15 +242,16 @@ if __name__ == "__main__":
     norm_dic = {args.instance: {'Tmax': Tmax, 'Smax': Smax}}
 
     # save args to file
-    save_args(args)
+    if not args.debug:
+        save_args(args)
 
     # train
-    if args.model_type == 'hybrid':
-        logger.info(f"Using HYBRID model with {args.n_gat_layers} GAT layer(s).")
-        model = HybridPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
-    else: # original
-        logger.info("Using ORIGINAL Transformer model.")
-        model = RecPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
+    # if args.model_type == 'hybrid':
+    #     logger.info(f"Using HYBRID model with {args.n_gat_layers} GAT layer(s).")
+    #     model = HybridPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
+    # else: # original
+    logger.info("Using ORIGINAL Transformer model.")
+    model = RecPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
 
     run_episode = RunEpisode(model, args)
 

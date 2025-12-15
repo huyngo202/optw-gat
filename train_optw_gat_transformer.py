@@ -9,11 +9,10 @@ import torch
 from torch import optim
 
 import src.config as cf
-import src.utils as u
+import src.utils_transformer as u
 import src.train_utils as tu
 import src.sampling_norm_utils as snu
-from src.neural_net import RecPointerNetwork
-from src.hybrid_neural_net import HybridPointerNetwork
+from src.neural_net_gat_transformer import GATTransformerPointerNetwork
 from src.solution_construction import RunEpisode
 
 # for logging
@@ -91,33 +90,28 @@ def train_loop(inp_val, inp_real, raw_data, run_episode, args):
 
 def setup_args_parser():
 
-    parser = argparse.ArgumentParser(description='train model')
+    parser = argparse.ArgumentParser(description='train GAT-Transformer model')
     parser.add_argument('--instance', help='which instance to train on')
     parser.add_argument('--device', help='device to use (cpu/cuda)', default='cuda')
-    parser.add_argument('--use_checkpoint', help='use checkpoint (see https://pytorch.org/docs/stable/checkpoint.html)', action='store_true')
-    parser.add_argument('--sample_type', help='how to sample the scores of each point of interest: \n \
-                                uniformly sampled (uni_samp), \
-                                score proportional to each point of interest\'s duration of visit (corr_samp)' ,
+    parser.add_argument('--use_checkpoint', help='use checkpoint', action='store_true')
+    parser.add_argument('--sample_type', help='how to sample scores: uniformly sampled (uni_samp) or score proportional (corr_samp)',
                                 choices=['uni_samp', 'corr_samp'],
                                 default='uni_samp')
-    parser.add_argument('--model_name', help='model name', default='default', type=str)
-    parser.add_argument('--model_type', help='type of architecture to use', default='original', choices=['original', 'hybrid'])
-    parser.add_argument('--n_gat_layers', help='number of GAT layers for the hybrid model', default=1, type=int)
+    parser.add_argument('--model_name', help='model name', default='gat_transformer', type=str)
+    parser.add_argument('--n_gat_layers', help='number of GAT layers', default=1, type=int)
     parser.add_argument('--debug', help='debug mode (verbose output and no saving)', action='store_true')
-    parser.add_argument('--nsave', help='saves the model weights every <nsave> epochs', default=10000, type=int)
-    parser.add_argument('--nprint', help='to log and save the training history \
-                                          (total score in the benchmark and generated \
-                                          instances of the validation set) every <nprint> epochs', default=2500, type=int)
-    parser.add_argument('--nepocs', help='number of training epochs', default=100000, type=int)
+    parser.add_argument('--nsave', help='saves the model weights every nsave epochs', default=100, type=int)
+    parser.add_argument('--nprint', help='to log and save the training history every nprint epochs', default=100, type=int)
+    parser.add_argument('--nepocs', help='number of training epochs', default=10000, type=int)
     parser.add_argument('--batch_size', help='training batch size', default=32, type=int)
     parser.add_argument('--max_grad_norm', help='maximum norm value for gradient value clipping', default=1, type=int)
     parser.add_argument('--lr', help='initial learning rate', default=1e-4, type=float)
-    parser.add_argument('--seed', help='seed random # generators (for reproducibility)', default=2925, type=int)
+    parser.add_argument('--seed', help='seed random generators (for reproducibility)', default=2925, type=int)
     parser.add_argument('--beta', help='entropy term coefficient', default=0.01, type=float)
     parser.add_argument('--rnn_hidden', help='hidden size of RNN', default=128, type=int)
     parser.add_argument('--n_layers', help='number of attention layers in the encoder', default=2, type=int)
     parser.add_argument('--n_heads', help='number heads in attention layers', default=8, type=int)
-    parser.add_argument('--ff_dim', help='hidden dimension of the encoder\'s feedforward sublayer', default=256, type=int)
+    parser.add_argument('--ff_dim', help='hidden dimension of the encoder feedforward sublayer', default=256, type=int)
     parser.add_argument('--nfeatures', help='number of non-dynamic features', default=7, type=int)
     parser.add_argument('--ndfeatures', help='number of dynamic features', default=8, type=int)
 
@@ -159,7 +153,7 @@ def parse_args_further(args):
 
 def log_args(args):
     logger.info(N_DASHES*'-')
-    logger.info('Running train_model_main.py')
+    logger.info('Running train_optw_gat_transformer.py')
     logger.info(N_DASHES*'-')
     logger.info('model name:  %s' % args.model_name)
     logger.info(N_DASHES*'-')
@@ -168,6 +162,7 @@ def log_args(args):
     logger.info('instance type: %s' % args.instance_type)
     logger.info('use_checkpoint: %s' % args.use_checkpoint)
     logger.info('sample type: %s' % args.sample_type)
+    logger.info('n_gat_layers: %s' % args.n_gat_layers)
     logger.info('debug mode: %s' % args.debug)
     logger.info('nsave: %s' % args.nsave)
     logger.info('nprint: %s' % args.nprint)
@@ -201,7 +196,8 @@ def save_args(args):
                  'ndfeatures', 'rnn_hidden', 'sample_type', 'lr', 'batch_size',
                  'seed', 'beta', 'max_grad_norm', 'nsave', 'nepocs']
 
-    dict_to_save = { key: args.__dict__[key] for key in keys_list }
+    dict_to_save = { key: args.__dict__.get(key, None) for key in keys_list }
+    dict_to_save['model_type'] = 'gat_transformer'  # Hard-code model type
     FILE_NAME = '/model_'+args.model_name+'_training_args.txt'
 
     with open(args.save_w_dir+FILE_NAME, 'w') as f:
@@ -220,7 +216,7 @@ if __name__ == "__main__":
     logger = u.setup_logger(args.debug)
     log_args(args)
 
-    # for reproducibility"
+    # for reproducibility
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if str(args.device) in ['cuda', 'cuda:0', 'cuda:1']:
@@ -241,15 +237,12 @@ if __name__ == "__main__":
     norm_dic = {args.instance: {'Tmax': Tmax, 'Smax': Smax}}
 
     # save args to file
-    save_args(args)
+    if not args.debug:
+        save_args(args)
 
-    # train
-    if args.model_type == 'hybrid':
-        logger.info(f"Using HYBRID model with {args.n_gat_layers} GAT layer(s).")
-        model = HybridPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
-    else: # original
-        logger.info("Using ORIGINAL Transformer model.")
-        model = RecPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
+    # train GAT-Transformer model
+    logger.info(f"Using GAT-Transformer model with {args.n_gat_layers} GAT layer(s).")
+    model = GATTransformerPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
 
     run_episode = RunEpisode(model, args)
 

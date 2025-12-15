@@ -1,0 +1,123 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, calc, chains, fit, matrix}
+
+\begin{document}
+
+\section{Bài toán Orienteering có Cửa sổ Thời gian (OPTW)}
+\label{sec:optw_theory}
+
+Bài toán Orienteering có Cửa sổ Thời gian (OPTW) là một bài toán tối ưu hóa tổ hợp trên đồ thị, được xem là biến thể của bài toán Người du lịch (TSP) và bài toán Đóng gói ba lô (Knapsack Problem). Bài toán này thường được sử dụng để mô hình hóa bài toán Thiết kế Lịch trình Du lịch (Tourist Trip Design Problem - TTDP) \cite{solomon1987algorithms}.
+
+\subsection{Định nghĩa toán học}
+Cho một đồ thị đầy đủ $G = (V, E)$, trong đó $V = \{v_1, ..., v_n\}$ là tập hợp các đỉnh (địa điểm) và $E$ là tập hợp các cung nối. Mỗi đỉnh $v_i$ có các thuộc tính sau:
+\begin{itemize}
+    \item $S_i$: Điểm thưởng (score/profit) thu được khi ghé thăm đỉnh $i$.
+    \item $[O_i, C_i]$: Khung thời gian (Time Window), với $O_i$ là thời gian mở cửa và $C_i$ là thời gian đóng cửa.
+    \item $D_i$: Thời gian phục vụ (Duration) hoặc thời gian tham quan tại đỉnh $i$.
+    \item $x_i \in \mathbb{R}^2$: Tọa độ không gian của đỉnh.
+\end{itemize}
+
+Giả sử $v_1$ là điểm xuất phát và $v_n$ là điểm kết thúc. Thời gian di chuyển giữa hai đỉnh $v_i$ và $v_j$ được ký hiệu là $\Delta_{ij}$. Mục tiêu là tìm một lộ trình (một chuỗi các đỉnh) $R = (\pi_1, \pi_2, ..., \pi_m)$ bắt đầu tại $v_1$ và kết thúc tại $v_n$ sao cho tổng điểm thưởng là lớn nhất, đồng thời thỏa mãn các ràng buộc về thời gian.
+
+Quy trình xây dựng lộ trình diễn ra tuần tự. Tại mỗi bước, nếu chọn di chuyển từ đỉnh hiện tại $v_i$ sang đỉnh $v_j$, các ràng buộc sau phải được thỏa mãn:
+
+\begin{equation}
+    a_j + \text{wait}_j \leq C_j
+\end{equation}
+\begin{equation}
+    a_j + \text{wait}_j + D_j + \Delta_{jn} \leq T_{end}
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $a_j$: Thời gian đến đỉnh $v_j$.
+    \item $\text{wait}_j = \max(0, O_j - a_j)$: Thời gian chờ nếu đến sớm hơn giờ mở cửa.
+    \item $T_{end}$: Thời gian giới hạn của toàn bộ chuyến đi (thời gian đóng cửa của điểm kết thúc $v_n$).
+\end{itemize}
+
+Mục tiêu là tối đa hóa hàm mục tiêu:
+\begin{equation}
+    \max \sum_{v_k \in R} S_k
+\end{equation}
+
+\input{optw_illustration}
+
+\section{Học tăng cường cho Tối ưu hóa Tổ hợp}
+
+Phương pháp giải quyết bài toán OPTW trong đồ án này dựa trên khuôn khổ Học tăng cường sâu (Deep Reinforcement Learning - DRL), coi quá trình xây dựng lộ trình là một chuỗi các quyết định tuần tự.
+
+\subsection{Mô hình Quy trình Quyết định Markov (MDP)}
+Bài toán được ánh xạ sang MDP với các thành phần:
+\begin{itemize}
+    \item \textbf{Trạng thái ($s_t$)}: Biểu diễn cấu hình hiện tại của lộ trình tại bước $t$, bao gồm vị trí hiện tại, thời gian hiện tại, và danh sách các điểm chưa được ghé thăm.
+    \item \textbf{Hành động ($a_t$)}: Lựa chọn điểm tiếp theo để ghé thăm từ tập hợp các điểm khả thi (thỏa mãn ràng buộc khung thời gian).
+    \item \textbf{Chuyển đổi trạng thái}: Cập nhật vị trí hiện tại và cộng thêm thời gian di chuyển, thời gian chờ và thời gian phục vụ vào quỹ thời gian.
+    \item \textbf{Phần thưởng ($r_t$)}: Điểm thưởng $S_i$ của địa điểm vừa được chọn.
+\end{itemize}
+
+\subsection{Thuật toán REINFORCE với Baseline}
+Chúng ta huấn luyện một mạng nơ-ron có tham số $\theta$ để học một chính sách ngẫu nhiên (stochastic policy) $p_\theta(\pi | s)$. Mục tiêu là tối đa hóa kỳ vọng tổng phần thưởng $J(\theta) = \mathbb{E}_{\pi \sim p_\theta}[R(\pi)]$ \cite{sutskever2014sequence}.
+
+Gradient của hàm mục tiêu được xấp xỉ bằng thuật toán REINFORCE \cite{bello2016neural}:
+\begin{equation}
+    \nabla_\theta J(\theta) \approx \frac{1}{B} \sum_{b=1}^{B} (R(\pi^{(b)}) - b(s)) \nabla_\theta \log p_\theta(\pi^{(b)} | s)
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $B$ là kích thước batch.
+    \item $R(\pi^{(b)})$ là tổng phần thưởng của mẫu lộ trình thứ $b$.
+    \item $b(s)$ là giá trị \textit{baseline}, thường được tính bằng trung bình động của các phần thưởng trong quá khứ hoặc trung bình của batch hiện tại, nhằm giảm phương sai (variance) trong quá trình huấn luyện giúp mô hình hội tụ nhanh hơn.
+\end{itemize}
+
+\section{Kiến trúc Mạng Nơ-ron Đề xuất}
+
+Mô hình được xây dựng dựa trên kiến trúc \textbf{Pointer Network} \cite{vinyals2015pointer}, một dạng mạng nơ-ron chuyên biệt cho các bài toán mà đầu ra là một hoán vị hoặc tập con của đầu vào. Kiến trúc tổng thể bao gồm hai phần chính: Bộ mã hóa (Encoder) và Bộ giải mã (Decoder).
+
+
+\subsection{Biểu diễn Đặc trưng (Feature Embedding)}
+Khác với các mô hình truyền thống chỉ mã hóa một lần, bài toán OPTW có các đặc trưng thay đổi theo thời gian. Do đó, tại mỗi bước thời gian, đầu vào của mạng bao gồm:
+\begin{itemize}
+    \item \textbf{Đặc trưng tĩnh (Static features):} Tọa độ $(x, y)$, điểm thưởng $S$, thời gian phục vụ $D$, khung thời gian $[O, C]$. Các đặc trưng này không đổi.
+    \item \textbf{Đặc trưng động (Dynamic features):} Thời gian hiện tại, thời gian còn lại đến khi đóng cửa, khoảng cách từ vị trí hiện tại đến các điểm.
+\end{itemize}
+Hai nhóm đặc trưng này được chiếu qua các lớp tuyến tính (Linear layers) để tạo ra vector nhúng (embedding vector) cho mỗi điểm.
+
+\subsection{Bộ mã hóa (Encoder)}
+Đồ án này nghiên cứu và so sánh hai loại kiến trúc Encoder chính:
+
+\subsubsection{Transformer Encoder}
+Sử dụng cơ chế \textbf{Multi-Head Self-Attention} (MHA) \cite{vaswani2017attention} để nắm bắt mối quan hệ giữa các điểm trong tập hợp.
+\begin{equation}
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+\end{equation}
+Transformer cho phép mô hình nhìn thấy toàn cục mối quan hệ giữa mọi cặp điểm. Tuy nhiên, nó có thể chưa tối ưu trong việc nắm bắt cấu trúc tô-pô cục bộ của bài toán định tuyến.
+
+\subsubsection{Graph Attention Network (GAT) Encoder - Đề xuất cải tiến}
+Đây là đóng góp chính về mặt kiến trúc. Thay vì sử dụng Attention toàn cục, chúng tôi tích hợp lớp \textbf{Graph Attention (GATConv)} \cite{velivckovic2017graph}. GAT hoạt động trên cấu trúc đồ thị, trong đó mỗi nút chỉ tổng hợp thông tin từ các "hàng xóm" của nó.
+
+Trong ngữ cảnh OPTW, đồ thị được xây dựng động tại mỗi bước, trong đó các cạnh chỉ tồn tại giữa các điểm có thể di chuyển đến nhau (khả thi về thời gian).
+Công thức cập nhật đặc trưng cho nút $i$ trong GAT:
+\begin{equation}
+    h_i' = \sigma \left( \sum_{j \in \mathcal{N}_i} \alpha_{ij} W h_j \right)
+\end{equation}
+Trong đó $\alpha_{ij}$ là hệ số chú ý (attention coefficient) biểu thị tầm quan trọng của nút láng giềng $j$ đối với nút $i$, và $\mathcal{N}_i$ là tập hợp các láng giềng của $i$. Việc sử dụng GAT giúp mô hình tập trung tốt hơn vào các mối quan hệ không gian cục bộ và các ràng buộc khả thi ngay lập tức.
+
+\subsection{Bộ giải mã (Decoder) và Cơ chế Pointing}
+Bộ giải mã có nhiệm vụ duy trì trạng thái của hành trình đã đi qua. Chúng tôi sử dụng mạng \textbf{Long Short-Term Memory (LSTM)} hoặc \textbf{Transformer Decoder}.
+
+Tại mỗi bước $t$, trạng thái ẩn của bộ giải mã ($h_{dec}$) cùng với các biểu diễn từ bộ mã hóa ($h_{enc}$) được đưa vào \textbf{Cơ chế Pointing} (Pointing Mechanism) để tính phân phối xác suất chọn điểm tiếp theo:
+
+\begin{equation}
+    u_i = v^T \tanh(W_1 h_{enc, i} + W_2 h_{dec})
+\end{equation}
+\begin{equation}
+    p(i | \pi_{<t}) = \text{softmax}(u_i)
+\end{equation}
+
+Quan trọng nhất, một cơ chế \textbf{Masking} được áp dụng trước khi tính softmax để gán xác suất bằng 0 cho các điểm đã ghé thăm hoặc các điểm vi phạm ràng buộc thời gian, đảm bảo lời giải sinh ra luôn hợp lệ.
+
+\section{Kết luận chương}
+Chương này đã trình bày cơ sở lý thuyết vững chắc cho phương pháp tiếp cận. Việc kết hợp Học tăng cường (REINFORCE) với kiến trúc mạng nơ-ron lai ghép (GAT-Encoder và Transformer/LSTM Decoder) hứa hẹn sẽ giải quyết tốt các thách thức về không gian lời giải lớn và ràng buộc phức tạp của bài toán OPTW.
+
+\end{document}

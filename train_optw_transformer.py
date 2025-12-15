@@ -9,11 +9,11 @@ import torch
 from torch import optim
 
 import src.config as cf
-import src.utils as u
+import src.utils_transformer as u
 import src.train_utils as tu
 import src.sampling_norm_utils as snu
-from src.neural_net import RecPointerNetwork
-from src.hybrid_neural_net import HybridPointerNetwork
+# CHANGED: Import from new file
+from src.neural_net_transformer import TransformerPointerNetwork
 from src.solution_construction import RunEpisode
 
 # for logging
@@ -101,14 +101,15 @@ def setup_args_parser():
                                 choices=['uni_samp', 'corr_samp'],
                                 default='uni_samp')
     parser.add_argument('--model_name', help='model name', default='default', type=str)
-    parser.add_argument('--model_type', help='type of architecture to use', default='original', choices=['original', 'hybrid'])
+    # Removed 'model_type' choice since we force transformer here, or we can keep it for logging
+    parser.add_argument('--model_type', help='type of architecture to use', default='transformer', choices=['original', 'hybrid', 'transformer'])
     parser.add_argument('--n_gat_layers', help='number of GAT layers for the hybrid model', default=1, type=int)
     parser.add_argument('--debug', help='debug mode (verbose output and no saving)', action='store_true')
-    parser.add_argument('--nsave', help='saves the model weights every <nsave> epochs', default=10000, type=int)
+    parser.add_argument('--nsave', help='saves the model weights every <nsave> epochs', default=100, type=int)
     parser.add_argument('--nprint', help='to log and save the training history \
                                           (total score in the benchmark and generated \
                                           instances of the validation set) every <nprint> epochs', default=2500, type=int)
-    parser.add_argument('--nepocs', help='number of training epochs', default=100000, type=int)
+    parser.add_argument('--nepocs', help='number of training epochs', default=50000, type=int)
     parser.add_argument('--batch_size', help='training batch size', default=32, type=int)
     parser.add_argument('--max_grad_norm', help='maximum norm value for gradient value clipping', default=1, type=int)
     parser.add_argument('--lr', help='initial learning rate', default=1e-4, type=float)
@@ -159,7 +160,7 @@ def parse_args_further(args):
 
 def log_args(args):
     logger.info(N_DASHES*'-')
-    logger.info('Running train_model_main.py')
+    logger.info('Running train_optw_transformer.py')
     logger.info(N_DASHES*'-')
     logger.info('model name:  %s' % args.model_name)
     logger.info(N_DASHES*'-')
@@ -241,15 +242,12 @@ if __name__ == "__main__":
     norm_dic = {args.instance: {'Tmax': Tmax, 'Smax': Smax}}
 
     # save args to file
-    save_args(args)
+    if not args.debug:
+        save_args(args)
 
     # train
-    if args.model_type == 'hybrid':
-        logger.info(f"Using HYBRID model with {args.n_gat_layers} GAT layer(s).")
-        model = HybridPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
-    else: # original
-        logger.info("Using ORIGINAL Transformer model.")
-        model = RecPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
+    logger.info("Using NEW Transformer Pointer Network.")
+    model = TransformerPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device)
 
     run_episode = RunEpisode(model, args)
 

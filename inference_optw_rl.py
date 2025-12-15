@@ -16,7 +16,14 @@ import src.config as cf
 import src.problem_config as pcf
 
 from src.neural_net import RecPointerNetwork
-
+from src.neural_net import RecPointerNetwork
+try:
+    from src.hybrid_neural_net import HybridPointerNetwork
+except ImportError:
+    HybridPointerNetwork = None
+from src.neural_net_transformer import TransformerPointerNetwork
+from src.neural_net_gat_lstm import GATLSTMPointerNetwork
+from src.neural_net_gat_transformer import GATTransformerPointerNetwork
 
 # for logging
 N_DASHES = 40
@@ -91,6 +98,9 @@ def load_saved_args(args):
 
     with open(args.load_w_dir+'/model_'+args.model_name+'_training_args.txt') as json_file:
         data = json.load(json_file)
+        args.model_type = data.get('model_type', 'original')
+        args.n_gat_layers = data.get('n_gat_layers', 0)
+
         args.n_layers = data['n_layers']
         args.n_heads = data['n_heads']
         args.ff_dim = data['ff_dim']
@@ -113,13 +123,13 @@ def log_args(args):
     logger.info('infe_type: %s' % args.infe_type)
     logger.info('use_checkpoint: %s' % args.use_checkpoint)
     logger.info('sample type: %s' % args.sample_type)
-    logger.info('sample_prof: %s' % args.sample_prof)
+    # logger.info('sample_prof: %s' % args.sample_prof) # Removed as it's not in args
     logger.info('debug mode: %s' % args.debug)
     logger.info('nprint: %s' % args.nprint)
     logger.info('nepocs: %s' % args.nepocs)
     logger.info('seed: %s' % args.seed)
     logger.info(N_DASHES*'-')
-    logger.info('max square length (Xmax): %s' % args.Xmax)
+    # logger.info('max square length (Xmax): %s' % args.Xmax) # Removed
     logger.info('batch_size: %s' % args.batch_size)
     logger.info('max_grad_norm: %s' % args.max_grad_norm)
     logger.info('learning rate (lr): %s' % args.lr)
@@ -173,10 +183,25 @@ if __name__ == "__main__":
     # ---------------------------------
     # load model
     # ---------------------------------
+
     logger.info('Loading model for instance {instance} ...'.format(instance=args.instance))
     performance_scores = []
 
-    pointer_net = RecPointerNetwork(args.nfeatures, args.ndfeatures,
+    if args.model_type == 'hybrid':
+        logger.info(f"Loading HYBRID model with {args.n_gat_layers} GAT layer(s).")
+        pointer_net = HybridPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device).eval()
+    elif args.model_type == 'transformer':
+        logger.info(f"Loading TRANSFORMER model.")
+        pointer_net = TransformerPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device).eval()
+    elif args.model_type == 'gat_lstm':
+        logger.info(f"Loading GAT-LSTM model with {args.n_gat_layers} GAT layer(s).")
+        pointer_net = GATLSTMPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device).eval()
+    elif args.model_type == 'gat_transformer':
+        logger.info(f"Loading GAT-Transformer model with {args.n_gat_layers} GAT layer(s).")
+        pointer_net = GATTransformerPointerNetwork(args.nfeatures, args.ndfeatures, args.rnn_hidden, args).to(args.device).eval()
+    else: 
+        logger.info(f"Loading ORIGINAL model.") 
+        pointer_net = RecPointerNetwork(args.nfeatures, args.ndfeatures,
                               args.rnn_hidden, args).to(args.device).eval()
 
 

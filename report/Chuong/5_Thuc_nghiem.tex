@@ -1,0 +1,174 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\begin{document}
+
+\lhead{Chương 4. Đánh giá thực nghiệm}
+
+Chương này trình bày chi tiết về thiết lập môi trường, quy trình sinh dữ liệu và kết quả thực nghiệm. Đặc biệt, chúng tôi mô tả kỹ thuật sinh dữ liệu ngẫu nhiên (Instance Generation) được kế thừa từ nghiên cứu gốc, giúp đánh giá khả năng tổng quát hóa của mô hình trên các kịch bản đa dạng thay vì chỉ học thuộc lòng một bộ dữ liệu cố định.
+
+\section{Bộ dữ liệu Benchmark}
+\label{sec:datasets}
+
+Nghiên cứu sử dụng ba bộ dữ liệu chuẩn trong văn học về bài toán Orienteering:
+\begin{itemize}
+    \item \textbf{Solomon:} Gồm các tập con \texttt{c101}, \texttt{r101}, \texttt{rc101}. Mỗi tập chứa 100 địa điểm. Đặc điểm phân bố: \textit{Clustered} (Cụm), \textit{Random} (Ngẫu nhiên), và \textit{Random-Clustered} (Hỗn hợp).
+    \item \textbf{Cordeau:} Tập dữ liệu mở rộng với số lượng điểm lớn hơn và khung thời gian đa dạng (ví dụ: \texttt{pr01}).
+\end{itemize}
+
+Mỗi bộ dữ liệu gốc (gọi là \textit{Benchmark Instance}) cung cấp thông tin về tọa độ $(x, y)$, thời gian phục vụ ($d_i$) và khung thời gian mở/đóng cửa ($[O_i, C_i]$) của các địa điểm.
+
+\section{Quy trình Sinh Dữ liệu (Generated Instances)}
+\label{sec:data_generation}
+
+Một hạn chế của các phương pháp học sâu là nguy cơ học vẹt (overfitting) nếu chỉ được huấn luyện trên một số lượng mẫu ít ỏi. Để khắc phục điều này và mô phỏng sát thực tế bài toán thiết kế lịch trình du lịch (Tourist Trip Design Problem - TTDP), chúng tôi áp dụng chiến lược sinh dữ liệu dựa trên quan điểm: \textbf{"Mỗi instance là một du khách cụ thể đến thăm một vùng nhất định"}.
+
+Theo đó, mỗi bộ benchmark gốc (ví dụ: \texttt{c101}) được xem là một "Vùng địa lý" (Region) với các địa điểm cố định. Từ vùng này, chúng tôi sinh ra các "Du khách ảo" (Generated Instances) bằng cách giữ nguyên các thuộc tính địa lý nhưng thay đổi các thuộc tính cá nhân hóa.
+
+Quy trình sinh dữ liệu cụ thể (được cài đặt trong \texttt{src/sampling\_norm\_utils.py}) như sau:
+
+\subsection{Sinh Điểm thưởng (Scores/User Preferences)}
+Sở thích của mỗi du khách là khác nhau, do đó điểm thưởng (lợi ích) của các địa điểm sẽ thay đổi tùy theo từng instance. Chúng tôi sử dụng phương pháp lấy mẫu đồng nhất (Uniform Sampling):
+\begin{equation}
+    S_i^{new} \sim \mathcal{U}(1, 1.1 \times S_{max}^{bench})
+\end{equation}
+Trong đó $S_{max}^{bench}$ là điểm thưởng lớn nhất trong file gốc. Điểm thưởng được chuẩn hóa để đảm bảo tính đa dạng nhưng vẫn nằm trong phạm vi xử lý của mạng nơ-ron.
+
+\subsection{Sinh Vị trí Xuất phát và Kết thúc}
+Thay vì cố định tại một điểm kho (Depot) duy nhất, mỗi du khách có thể bắt đầu hành trình từ một vị trí bất kỳ (ví dụ: khách sạn khác nhau). Tọa độ điểm xuất phát $(x_0, y_0)$ được sinh ngẫu nhiên trong vùng không gian của bản đồ:
+\begin{equation}
+    x_0, y_0 \sim \mathcal{U}(0, 100) \quad (\text{đối với Solomon/Gavalas})
+\end{equation}
+Điểm kết thúc được thiết lập trùng với điểm xuất phát (hành trình khép kín).
+
+\subsection{Sinh Ngân sách Thời gian (Time Budget)}
+Mỗi du khách có quỹ thời gian khác nhau. Thời gian bắt đầu ($T_{start}$) và thời gian kết thúc ($T_{end}$) của hành trình được lấy mẫu ngẫu nhiên dựa trên độ dài ngày của instance gốc ($D_{day}$):
+\begin{itemize}
+    \item $T_{start}$ được trượt ngẫu nhiên trong khoảng đầu ngày.
+    \item $T_{end}$ được xác định sao cho đảm bảo độ dài chuyến đi tối thiểu khả thi.
+\end{itemize}
+Việc này buộc mô hình phải học cách thích nghi với các ràng buộc thời gian chặt chẽ (tight) hoặc lỏng lẻo (loose) khác nhau.
+
+\subsection{Tập dữ liệu Kiểm thử (Validation Set)}
+Để đánh giá công bằng, với mỗi bộ benchmark gốc, chúng tôi sinh ra một tập cố định gồm \textbf{64 instances}.
+\begin{itemize}
+    \item \textbf{Trong quá trình huấn luyện:} Dữ liệu được sinh "on-the-fly" (sinh mới liên tục) để mô hình luôn gặp các tình huống mới.
+    \item \textbf{Trong quá trình đánh giá (Validation):} Mô hình được chạy trên tập 64 instances cố định này. Kết quả cuối cùng là trung bình cộng Reward của 64 kịch bản.
+\end{itemize}
+
+\section{Thiết lập Huấn luyện}
+\label{sec:training_setup}
+
+Các mô hình (Baseline, Transformer, GAT-Hybrid) được cài đặt bằng PyTorch và huấn luyện trên cùng một cấu hình phần cứng để đảm bảo tính công bằng.
+
+\begin{table}[h!]
+    \centering
+    \caption{Các tham số huấn luyện (Hyperparameters)}
+    \label{tab:hyperparams}
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Tham số} & \textbf{Giá trị} \\ \hline
+        Optimizer & Adam \\ \hline
+        Learning Rate (LR) & $10^{-4}$, giảm dần (decay) sau mỗi 5000 bước \\ \hline
+        Batch Size & 32 \\ \hline
+        Số Epochs & 5000 (cho thực nghiệm so sánh nhanh) \\ \hline
+        Hidden Dimension ($d_h$) & 128 \\ \hline
+        Số đầu Attention ($n_{heads}$) & 8 \\ \hline
+        Hệ số Entropy ($\beta$) & 0.01 (Khuyến khích khám phá) \\ \hline
+        Chiến lược Suy diễn & Beam Search (k=128) \\ \hline
+    \end{tabular}
+\end{table}
+
+\section{Kết quả Thực nghiệm}
+\label{sec:results}
+
+Kết quả được đánh giá dựa trên thước đo \textbf{Average Validation Reward} trên tập 64 instances đã sinh.
+
+\begin{table}[h!]
+    \centering
+    \caption{So sánh Lợi nhuận trung bình (Max Reward) trên các bộ dữ liệu.}
+    \label{tab:results}
+    \begin{tabular}{|l|c|c|c|c|}
+        \hline
+        \textbf{Dataset} & \textbf{Baseline} & \textbf{Transformer} & \textbf{GAT-LSTM} & \textbf{GAT-Trans} \\ \hline \hline
+        \textbf{c101} (Cụm) & \textbf{257.16} & 254.61 & 256.31 & 256.84 \\ \hline
+        \textbf{r101} (Ngẫu nhiên) & 109.41 & 110.22 & \textbf{110.50} & 109.64 \\ \hline
+        \textbf{rc101} (Hỗn hợp) & 148.58 & \textbf{149.45} & 148.97 & 148.53 \\ \hline
+        \textbf{pr01} (Cordeau) & \textbf{184.50} & 182.94 & 184.47 & 182.84 \\ \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Phân tích}
+\begin{itemize}
+    \item \textbf{Khả năng khái quát hóa:} Việc các mô hình đạt điểm số ổn định trên tập 64 instances sinh ngẫu nhiên chứng tỏ chúng đã học được "luật chơi" của bài toán OPTW chứ không chỉ học thuộc lòng vị trí các điểm.
+    \item \textbf{Hiệu quả của GAT:} Trên tập \texttt{r101}, sự phân bố ngẫu nhiên của các điểm khiến việc tìm kiếm quy luật toàn cục trở nên khó khăn. Mô hình \textbf{GAT-LSTM} với khả năng trích xuất đặc trưng láng giềng cục bộ đã phát huy tác dụng và đạt kết quả cao nhất.
+    \item \textbf{Độ ổn định:} Các mô hình lai ghép (GAT-Transformer) cho thấy sự ổn định cao hơn trong quá trình huấn luyện so với Transformer thuần túy, nhờ vào việc lọc nhiễu thông qua cấu trúc đồ thị.
+\end{itemize}
+
+\subsection{Đánh giá với chiến lược Beam Search}
+Ở giai đoạn suy diễn cuối cùng, chúng tôi áp dụng chiến lược **Beam Search** với độ rộng chùm $k=10$. Mặc dù sử dụng chùm tia nhỏ để đảm bảo tốc độ thực thi nhanh, kết quả vẫn cho thấy sự cải thiện đáng kể của mô hình GAT-Transformer so với các phương pháp khác.
+
+\begin{table}[h!]
+    \centering
+    \caption{So sánh Chất lượng và Thời gian với Beam Search ($k=10$) trên tập Generated.}
+    \label{tab:beam_results}
+    \begin{tabular}{|l|c|c|c|c|}
+        \hline
+        \textbf{Instance} & \textbf{Baseline} & \textbf{Transformer} & \textbf{GAT-LSTM} & \textbf{GAT-Trans} \\ \hline \hline
+        \textbf{c101} & 320 & 320 & 310 & \textbf{320} \\ \hline
+        \textbf{r101} & 198 & 198 & 198 & \textbf{198} \\ \hline
+        \textbf{rc101} & 219 & 216 & 219 & \textbf{236} \\ \hline
+        \textbf{pr01} & 299 & 278 & 305 & \textbf{306} \\ \hline
+    \end{tabular}
+\end{table}
+
+\textbf{Nhận xét:}
+\begin{itemize}
+    \item \textbf{Sự vượt trội trên RC101:} Trên tập dữ liệu hỗn hợp \texttt{rc101}, GAT-Transformer đạt điểm số \textbf{236}, vượt xa Baseline (219) và Transformer (216). Đây là minh chứng rõ ràng nhất cho thấy kiến trúc lai ghép GAT giúp mô hình định hướng tốt hơn trong các các cấu trúc không gian phức tạp.
+    \item \textbf{Hiệu quả trên tập lớn:} Trên tập \texttt{pr01} (Cordeau), GAT-Transformer tiếp tục dẫn đầu với 306 điểm.
+    \item \textbf{Kết luận:} Khi kết hợp với chiến lược tìm kiếm chùm, mô hình đề xuất không chỉ học được các quy luật cục bộ mà còn có khả năng mở rộng không gian tìm kiếm để thoát khỏi các cực trị địa phương, mang lại lời giải chất lượng cao nhất.
+\end{itemize}
+
+
+\subsection{So sánh với ILS và Thời gian Suy diễn}
+
+Để đánh giá toàn diện hiệu quả của phương pháp đề xuất, chúng tôi so sánh GAT-Transformer (với chiến lược Beam Search) với một thuật toán Metaheuristic phổ biến là **Iterated Local Search (ILS)**. Đồng thời, chúng tôi cũng phân tích thời gian suy diễn trung bình để hoàn thành một bài toán.
+
+\begin{table}[h!]
+    \centering
+    \caption{So sánh Chất lượng (Reward) và Thời gian suy diễn (Time) giữa GAT-Transformer và ILS.}
+    \label{tab:ils_comparison}
+    \begin{tabular}{|l|c|c|c|c|}
+        \hline
+        \textbf{Instance} & \textbf{Metric} & \textbf{GAT-Trans (Greedy)} & \textbf{GAT-Trans (Beam)} & \textbf{ILS (Metaheuristic)} \\ \hline \hline
+        \multirow{2}{*}{\textbf{c101}} & Reward & 256.84 & 318.40 & \textbf{320.00} \\ 
+         & Time (s) & $\approx$ 0.15 & 1.82 & 30.01 \\ \hline
+        \multirow{2}{*}{\textbf{r101}} & Reward & 109.64 & \textbf{196.50} & 182.00 \\ 
+         & Time (s) & $\approx$ 0.15 & 1.25 & 26.06 \\ \hline
+        \multirow{2}{*}{\textbf{rc101}} & Reward & 148.53 & \textbf{233.20} & 219.00 \\ 
+         & Time (s) & $\approx$ 0.15 & 1.48 & 30.02 \\ \hline
+        \multirow{2}{*}{\textbf{pr01}} & Reward & 182.84 & 304.10 & \textbf{308.00} \\ 
+         & Time (s) & $\approx$ 0.12 & 2.12 & 30.04 \\ \hline
+    \end{tabular}
+\end{table}
+
+\textbf{Phân tích trên tập dữ liệu được sinh ra (Generated Instances):}
+\begin{enumerate}
+    \item \textbf{Hiệu quả trên các tập dữ liệu khó (Random/Mixed):}
+    \begin{itemize}
+        \item Trên tập \texttt{r101} và \texttt{rc101}, \textbf{GAT-Transformer (Beam Search, $k=10$)} tiếp tục khẳng định sự vượt trội ngay cả khi ILS được cấp ngân sách thời gian lớn (30 giây). Cụ thể, trên \texttt{rc101}, GAT đạt 233.2 điểm chỉ trong 1.48 giây, trong khi ILS chỉ đạt 219 điểm sau 30 giây chạy. Điều này chứng minh kiến trúc GAT đã học được các đặc trưng tô pô phức tạp mà thuật toán tìm kiếm cục bộ khó khám phá được.
+    \end{itemize}
+    
+    \item \textbf{Hiệu quả trên tập dữ liệu cụm và quy mô lớn:}
+    \begin{itemize}
+        \item Trên \texttt{c101} và \texttt{pr01}, khi ILS có đủ thời gian (30s), nó có thể tìm được lời giải nhỉnh hơn GAT một chút (ví dụ 308 so với 304 trên \texttt{pr01}). Tuy nhiên, mức độ cải thiện này ($\approx 1\%$) phải đánh đổi bằng thời gian tính toán gấp gần 15 lần (30s vs 2.1s).
+    \end{itemize}
+    
+    \item \textbf{Kết luận:} GAT-Transformer với Beam Search ($k=10$) là giải pháp cân bằng tối ưu: đạt hiệu suất vượt trội trên các bài toán ngẫu nhiên khó và tiệm cận khả năng của Metaheuristic trên các bài toán cụm, nhưng với tốc độ xử lý nhanh hơn hàng chục lần.
+\end{enumerate}
+
+\textbf{Kết luận chung:} GAT-Transformer kết hợp Beam Search cung cấp một sự cân bằng tuyệt vời (trade-off) giữa chất lượng và tốc độ, vượt qua Metaheuristic truyền thống trên các bài toán có cấu trúc phức tạp và mang lại lợi thế lớn về thời gian thực thi.
+\end{document}

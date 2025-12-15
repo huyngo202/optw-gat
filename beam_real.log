@@ -1,0 +1,58 @@
+Instance   Model                Score      Time (ms) 
+-------------------------------------------------------
+Running: /home/huyngo/miniconda3/envs/optw_env/bin/python inference_optw_rl.py --instance c101 --model_name gat_transformer_bench --infe_type bs --max_beam_number 10 --saved_model_epoch 5000 --device cpu --generated
+c101       gat_transformer_bench 263.97     650       
+Running: /home/huyngo/miniconda3/envs/optw_env/bin/python inference_optw_rl.py --instance r101 --model_name gat_transformer_bench --infe_type bs --max_beam_number 10 --saved_model_epoch 5000 --device cpu --generated
+r101       gat_transformer_bench 114.0      206       
+Running: /home/huyngo/miniconda3/envs/optw_env/bin/python inference_optw_rl.py --instance rc101 --model_name gat_transformer_bench --infe_type bs --max_beam_number 10 --saved_model_epoch 5000 --device cpu --generated
+Error running inference for rc101 gat_transformer_bench
+Loading model for instance rc101 ...
+Loading GAT-Transformer model with 3 GAT layer(s).
+Infering routes for 64 generated instances...
+
+  0%|          | 0/64 [00:00<?, ?it/s]
+  2%|▏         | 1/64 [00:00<00:37,  1.69it/s]
+  3%|▎         | 2/64 [00:01<00:31,  1.99it/s]
+  6%|▋         | 4/64 [00:01<00:17,  3.35it/s]
+  8%|▊         | 5/64 [00:01<00:14,  3.98it/s]
+  9%|▉         | 6/64 [00:02<00:21,  2.73it/s]
+ 11%|█         | 7/64 [00:02<00:21,  2.62it/s]
+ 14%|█▍        | 9/64 [00:02<00:15,  3.58it/s]
+ 16%|█▌        | 10/64 [00:03<00:18,  2.92it/s]
+ 17%|█▋        | 11/64 [00:03<00:17,  2.97it/s]
+ 20%|██        | 13/64 [00:04<00:15,  3.21it/s]
+ 22%|██▏       | 14/64 [00:04<00:14,  3.48it/s]
+ 23%|██▎       | 15/64 [00:04<00:16,  3.00it/s]
+ 25%|██▌       | 16/64 [00:05<00:21,  2.20it/s]
+ 28%|██▊       | 18/64 [00:05<00:13,  3.30it/s]
+ 30%|██▉       | 19/64 [00:06<00:15,  2.93it/s]
+ 31%|███▏      | 20/64 [00:06<00:13,  3.17it/s]
+ 33%|███▎      | 21/64 [00:06<00:12,  3.54it/s]
+ 34%|███▍      | 22/64 [00:07<00:14,  2.88it/s]
+ 36%|███▌      | 23/64 [00:07<00:11,  3.60it/s]
+ 38%|███▊      | 24/64 [00:08<00:17,  2.23it/s]
+ 39%|███▉      | 25/64 [00:08<00:16,  2.34it/s]
+ 41%|████      | 26/64 [00:08<00:13,  2.71it/s]
+ 41%|████      | 26/64 [00:09<00:14,  2.68it/s]
+Traceback (most recent call last):
+  File "inference_optw_rl.py", line 222, in <module>
+    which_inf=args.infe_type)
+  File "/home/huyngo/Project/ML/optw_rl/src/inference_utils.py", line 118, in run_multiple
+    model, which_inf=which_inf)
+  File "/home/huyngo/Project/ML/optw_rl/src/inference_utils.py", line 90, in run_single
+    args, run_episode_inf)
+  File "/home/huyngo/Project/ML/optw_rl/src/inference_utils.py", line 35, in bs_inference
+    seq, _ = run_episode(binst_data, bdata_scaled, start_time, dist_mat, 'greedy', nb)
+  File "/home/huyngo/miniconda3/envs/optw_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/huyngo/Project/ML/optw_rl/src/solution_construction.py", line 327, in forward
+    blactions[:, step+1] = bpres_actions
+IndexError: index 102 is out of bounds for dimension 1 with size 102
+
+rc101      gat_transformer_bench FAILED     FAILED    
+Running: /home/huyngo/miniconda3/envs/optw_env/bin/python inference_optw_rl.py --instance pr01 --model_name gat_transformer_bench --infe_type bs --max_beam_number 10 --saved_model_epoch 5000 --device cpu --generated
+pr01       gat_transformer_bench 190.02     773       
+No checkpoint found for t101 gat_transformer_bench
+t101       gat_transformer_bench FAILED     FAILED    
+
+Saved results to results/generated_beam_results.csv

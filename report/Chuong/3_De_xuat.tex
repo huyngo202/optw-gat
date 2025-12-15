@@ -1,0 +1,134 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usetikzlibrary{shapes, arrows.meta, positioning, calc}
+
+\begin{document}
+
+\lhead{Chương 3. Phương pháp đề xuất}
+
+Chương này trình bày chi tiết về phương pháp đề xuất để giải quyết bài toán Orienteering có Cửa sổ Thời gian (OPTW) dựa trên mô hình Học tăng cường sâu (Deep Reinforcement Learning). Nội dung tập trung mô tả kiến trúc mạng nơ-ron lai ghép (Hybrid Architecture) kết hợp giữa Mạng Chú ý Đồ thị (GAT) và Transformer, cơ chế trích xuất đặc trưng động, cũng như các chiến lược huấn luyện và suy diễn nhằm tối ưu hóa chất lượng lời giải.
+
+\section{Tổng quan hệ thống}
+\label{sec:system_overview}
+
+Hệ thống được xây dựng dựa trên nền tảng kiến trúc \textbf{Pointer Network} nhưng được cải tiến mạnh mẽ để thích nghi với các ràng buộc thay đổi theo thời gian thực của bài toán OPTW. Quy trình xử lý tổng thể bao gồm bốn giai đoạn chính:
+
+\begin{enumerate}
+    \item \textbf{Biểu diễn trạng thái (State Representation):} Dữ liệu đầu vào của bài toán được chuyển đổi thành các vector đặc trưng. Hệ thống phân tách rõ ràng giữa các thông tin cố định (đặc trưng tĩnh) và các thông tin thay đổi theo diễn biến của hành trình (đặc trưng động).
+    \item \textbf{Mã hóa (Encoder):} Đây là thành phần cốt lõi của đề xuất. Chúng tôi sử dụng kiến trúc lai ghép:
+    \begin{itemize}
+        \item \textbf{Tầng xử lý cục bộ:} Sử dụng Mạng Chú ý Đồ thị (GAT) để tổng hợp thông tin từ các địa điểm lân cận khả thi, giúp mô hình nắm bắt cấu trúc tô-pô của đồ thị.
+        \item \textbf{Tầng xử lý toàn cục:} Sử dụng Transformer với cơ chế chú ý đệ quy (Recursive Attention) để nắm bắt sự phụ thuộc chuỗi dài và ngữ cảnh toàn cục.
+    \end{itemize}
+    \item \textbf{Giải mã và Ra quyết định (Decoder \& Pointing):} Sử dụng mạng hồi quy để duy trì trạng thái của chuỗi hành trình. Tại mỗi bước, cơ chế Pointing tính toán phân phối xác suất trên các đỉnh chưa được thăm để lựa chọn điểm đến tiếp theo tối ưu nhất.
+    \item \textbf{Kiểm soát khả thi (Feasibility Control):} Một cơ chế che (Masking) thông minh kết hợp với kỹ thuật nhìn trước (Lookahead) được áp dụng để đảm bảo mọi quyết định của mô hình đều tuân thủ nghiêm ngặt các ràng buộc về khung thời gian và thời gian di chuyển.
+\end{enumerate}
+
+\section{Trích xuất và Biểu diễn Đặc trưng}
+\label{sec:feature_engineering}
+
+Hiệu quả của mô hình học sâu phụ thuộc lớn vào cách biểu diễn trạng thái của môi trường. Tại mỗi bước thời gian $t$, trạng thái của bài toán được định nghĩa bởi sự kết hợp của hai nhóm đặc trưng sau:
+
+\subsection{Đặc trưng tĩnh (Static Features)}
+Đây là các thuộc tính bất biến của bài toán, được chuẩn hóa về khoảng $[0, 1]$ để đảm bảo tính ổn định số học cho mạng nơ-ron:
+\begin{itemize}
+    \item Tọa độ không gian 2 chiều $(x, y)$ của các địa điểm.
+    \item Thời gian phục vụ (Duration) tại mỗi điểm.
+    \item Khung thời gian mở cửa ($O_i$) và đóng cửa ($C_i$).
+    \item Điểm thưởng (Score/Profit) của từng địa điểm.
+    \item Tổng quỹ thời gian cho phép của chuyến đi ($T_{max}$).
+\end{itemize}
+Các đặc trưng này được đưa qua một lớp nhúng tuyến tính (Linear Embedding) một lần duy nhất ở đầu quá trình xử lý.
+
+\subsection{Đặc trưng động (Dynamic Features)}
+Khác với các bài toán định tuyến tĩnh (như TSP), bài toán OPTW có trạng thái thay đổi liên tục. Tại mỗi bước ra quyết định, khi tác nhân đang ở vị trí $u$ tại thời điểm $t_{curr}$, hệ thống tính toán lại một tập hợp các đặc trưng động cho mỗi điểm ứng viên $v$:
+
+\begin{itemize}
+    \item \textbf{Nhóm đặc trưng liên quan đến thời gian hiện tại:}
+    \begin{enumerate}
+        \item Thời gian chờ đến khi mở cửa: $(O_v - t_{curr}) / T_{max}$.
+        \item Thời gian còn lại đến khi đóng cửa: $(C_v - t_{curr}) / T_{max}$.
+        \item Thời gian di chuyển từ vị trí hiện tại: $(T_{travel}(u, v)) / T_{max}$.
+        \item Tỷ lệ thời gian đã trôi qua của toàn bộ hành trình.
+    \end{enumerate}
+    \item \textbf{Nhóm đặc trưng liên quan đến thời gian dự kiến đến nơi:}
+    Tương tự như nhóm trên, nhưng các giá trị được tính dựa trên thời điểm dự kiến tác nhân sẽ đến đỉnh $v$ ($t_{arrival} = t_{curr} + T_{travel}(u, v)$).
+\end{itemize}
+Việc cập nhật liên tục các đặc trưng này giúp mạng nơ-ron "nhận thức" được sự trôi đi của thời gian và mức độ khẩn cấp (urgency) của từng điểm đến, từ đó đưa ra quyết định cân bằng giữa điểm thưởng và chi phí thời gian.
+
+\section{Kiến trúc Mạng Nơ-ron Đề xuất}
+\label{sec:proposed_architecture}
+
+\subsection{Kiến trúc Lai ghép GAT-Transformer (GAT-Transformer Hybrid)}
+\begin{figure}[H] % Dùng [H] (cần gói float) hoặc [h!] để ảnh nằm đúng vị trí này
+    \centering
+    % Thay 'ten_file_anh.png' bằng tên file ảnh thực tế của bạn
+    \includegraphics[width=1.0\textwidth]{images/optw_gat_transformer_architecture.png} 
+    \caption{Sơ đồ kiến trúc GAT-Transformer đề xuất. (A) Bộ mã hóa lai ghép kết hợp GAT (xử lý cục bộ) và Transformer đệ quy (xử lý toàn cục). (B) Bộ giải mã tinh giản sử dụng Cross-Attention để ra quyết định tuần tự.}
+    \label{fig:gat_transformer_arch}
+\end{figure}
+% === KẾT THÚC CHÈN ẢNH ===
+
+Để khắc phục nhược điểm của các mô hình chỉ dựa trên chuỗi (sequence-based) vốn yếu trong việc nắm bắt cấu trúc không gian cục bộ, chúng tôi đề xuất mô hình Encoder hai giai đoạn:
+
+\subsubsection{Giai đoạn 1: Xử lý cục bộ với Graph Attention Network (GAT)}
+Chúng tôi tích hợp lớp tích chập đồ thị (Graph Convolution) sử dụng cơ chế chú ý. Đầu vào của lớp này là một đồ thị động, trong đó cạnh nối giữa hai đỉnh $(i, j)$ chỉ tồn tại nếu việc di chuyển từ $i$ đến $j$ là \textit{khả thi} về mặt thời gian.
+
+Công thức cập nhật vector biểu diễn cho nút $i$ tại lớp GAT được mô tả như sau:
+\begin{equation}
+    h_i' = \sigma \left( \sum_{j \in \mathcal{N}_i} \alpha_{ij} \mathbf{W} h_j \right)
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $\mathcal{N}_i$ là tập hợp các láng giềng khả thi của $i$.
+    \item $\mathbf{W}$ là ma trận trọng số cần học.
+    \item $\alpha_{ij}$ là hệ số chú ý, biểu thị mức độ quan trọng của thông tin từ nút $j$ đối với nút $i$.
+\end{itemize}
+Cơ chế này giúp mỗi nút tổng hợp thông tin từ các láng giềng, tạo ra một biểu diễn cục bộ (local embedding) mạnh mẽ trước khi đi vào xử lý toàn cục.
+
+\subsubsection{Giai đoạn 2: Xử lý toàn cục với Transformer có đệ quy}
+Sau khi qua các lớp GAT, vector biểu diễn tiếp tục được đưa vào các lớp Transformer Encoder. Điểm đặc biệt trong kiến trúc đề xuất là việc sử dụng cơ chế \textbf{Recursive Self-Attention}.
+
+Thay vì tính toán các vector Key ($K$), Query ($Q$) và Value ($V$) hoàn toàn từ đầu vào tĩnh, chúng tôi sử dụng trạng thái ẩn (hidden state) từ bước thời gian trước đó để tham gia vào quá trình tính toán Key cho bước hiện tại. Điều này tạo ra sự liên kết thời gian (temporal dependency) ngay trong quá trình mã hóa, phù hợp với bản chất tuần tự của quá trình xây dựng lộ trình.
+
+\subsection{Cơ chế Masking và Lookahead}
+Để đảm bảo tính hợp lệ tuyệt đối của lời giải sinh ra, một cơ chế Masking nghiêm ngặt được áp dụng. Tại mỗi bước, một mặt nạ (mask) được tạo ra để loại bỏ các hành động không hợp lệ. Một đỉnh $v$ sẽ bị che đi (xác suất chọn bằng 0) nếu thỏa mãn bất kỳ điều kiện nào sau đây:
+\begin{itemize}
+    \item Đỉnh $v$ đã được ghé thăm trước đó.
+    \item Không thể đến $v$ trước giờ đóng cửa ($t_{arrival} > C_v$).
+    \item \textbf{Điều kiện Lookahead:} Sau khi thăm $v$, tác nhân không đủ thời gian để quay trở về kho trước thời gian giới hạn $T_{max}$.
+\end{itemize}
+Việc áp dụng Lookahead giúp "tỉa" bớt các nhánh đi vào ngõ cụt, giúp mô hình hội tụ nhanh hơn và tránh sinh ra các lộ trình không khả thi.
+
+\section{Chiến lược Huấn luyện và Suy diễn}
+
+\subsection{Huấn luyện: REINFORCE với Baseline}
+Mô hình được huấn luyện theo phương pháp Policy Gradient sử dụng thuật toán REINFORCE. Mục tiêu là tối đa hóa tổng điểm thưởng kỳ vọng $J(\theta)$. Hàm mất mát (Loss Function) được định nghĩa như sau:
+\begin{equation}
+    \mathcal{L}(\theta) = - \frac{1}{B} \sum_{i=1}^{B} (R(\pi_i) - b) \log p_\theta(\pi_i)
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $B$ là kích thước của một batch huấn luyện.
+    \item $R(\pi_i)$ là tổng điểm thưởng thực tế của lộ trình $\pi_i$ được sinh ra bởi mô hình.
+    \item $b$ là giá trị \textit{baseline}, được tính bằng trung bình điểm thưởng của các lộ trình trong batch hiện tại. Việc trừ đi baseline giúp giảm phương sai (variance) của ước lượng gradient, giúp quá trình huấn luyện ổn định hơn.
+    \item $p_\theta(\pi_i)$ là xác suất sinh ra lộ trình $\pi_i$ của mô hình.
+\end{itemize}
+Ngoài ra, kỹ thuật \textbf{Entropy Regularization} cũng được áp dụng để khuyến khích mô hình khám phá các chiến lược mới, tránh việc hội tụ sớm vào các cực trị địa phương.
+
+\subsection{Suy diễn: Beam Search và Active Search}
+Trong giai đoạn kiểm thử (Inference), thay vì chỉ sử dụng phương pháp tham lam (Greedy Search), chúng tôi áp dụng hai chiến lược nâng cao:
+
+\begin{enumerate}
+    \item \textbf{Beam Search:} Tại mỗi bước giải mã, thuật toán duy trì $k$ chuỗi lời giải tiềm năng nhất (với $k$ thường được chọn là 128). Điều này mở rộng không gian tìm kiếm và tăng xác suất tìm được lời giải tốt hơn.
+    \item \textbf{Active Search:} Đây là chiến lược tinh chỉnh (fine-tuning) tại thời điểm suy diễn. Với mỗi bộ dữ liệu kiểm thử cụ thể, mô hình sẽ được huấn luyện thêm một số bước nhỏ trên chính dữ liệu đó trước khi thực hiện Beam Search. Điều này cho phép các tham số của mô hình thích nghi tốt hơn với đặc điểm phân bố dữ liệu riêng biệt của từng trường hợp cụ thể.
+\end{enumerate}
+
+\vspace{1cm}
+\textbf{Tổng kết chương}
+
+Chương này đã trình bày toàn diện phương pháp đề xuất. Sự kết hợp giữa GAT (trích xuất đặc trưng đồ thị cục bộ), Transformer đệ quy (xử lý chuỗi toàn cục) và hệ thống đặc trưng động chi tiết tạo nên một kiến trúc mạnh mẽ cho bài toán OPTW. Bên cạnh đó, các chiến lược Masking thông minh và Active Search đóng vai trò quan trọng trong việc nâng cao hiệu năng thực tế. Chương tiếp theo sẽ trình bày các kết quả thực nghiệm để kiểm chứng hiệu quả của các phương pháp này.
+
+\end{document}
