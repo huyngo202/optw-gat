@@ -1,178 +1,85 @@
-# optw_rl
+# Deep Reinforcement Learning for OPTW with GAT-Transformer
 
-A PyTorch implementation of the Pointer Network model in:
+This repository implements a **Graph Attention Network (GAT)** based approach for solving the **Orienteering Problem with Time Windows (OPTW)**, a complex combinatorial optimization problem relevant to Tourist Trip Design Problems (TTDP). The implementation relies on Deep Reinforcement Learning (DRL) using the REINFORCE algorithm with a baseline.
 
-*[A reinforcement learning approach to the orienteering problem with time windows](https://www.sciencedirect.com/science/article/pii/S0305054821001349) <br/>
-[Gama R](https://scholar.google.com/citations?hl=en&user=uHKwsF0AAAAJ&view_op=list_works&sortby=pubdate), 
-[Fernandes HL](https://scholar.google.com/citations?view_op=list_works&hl=en&hl=en&user=JG7xb2AAAAAJ&sortby=pubdate) - Computers & Operations Research, 2021* 
-  ([arXiv](https://arxiv.org/abs/2011.03647), [github](https://github.com/mustelideos/optw_rl))
+## Key Features
 
-```
+- **Hybrid Architecture:** Combines Graph Attention Networks (GAT) for local feature extraction with a Recursive Transformer Encoder for global sequence modeling.
+- **Dynamic Feature Engineering:** Robust handling of time-dependent constraints via dynamic node embedding updates.
+- **Advanced Inference:** Supports Greedy Search and Beam Search (k=10/128) decoding strategies.
+- **Comparative Benchmarking:** Includes scripts to benchmark against Iterated Local Search (ILS) and classical Pointer Networks.
+- **Robust Data Generation:** Tools to generate realistic tourist instances (Simulated User Profiles) for validation.
 
-@article{GAMA2021105357,
-title={A Reinforcement Learning Approach to the Orienteering Problem with Time Windows},
-journal = {Computers & Operations Research},
-volume = {133},
-pages = {105357},
-year = {2021},
-issn = {0305-0548},
-author={Ricardo Gama and Hugo L. Fernandes},
-journal = {Computers & Operations Research},
-url = {https://www.sciencedirect.com/science/article/pii/S0305054821001349},
-}
-```
+## Architecture Overview
 
-![Learning and Inference](https://github.com/mustelideos/optw_rl/blob/main/images/figure_single_subset.png)
+The model framework consists of:
+1.  **GAT Encoder:** Extracts topological features from the graph of available points.
+2.  **Recursive Transformer:** Captures long-range dependencies in the route sequence.
+3.  **Decoder with Pointing Mechanism:** Sequentially selects the next point to visit, satisfying all time window constraints via masking.
 
-## Quick Usage:
+## Setup Instructions
 
-This repo includes two already trained models:
+### Prerequisites
+- Python 3.7+
+- Anaconda or Miniconda
 
-* Cordeau's OPTW instance-region pr01, trained with uniform sampling:
-```console
-$ python inference_optw_rl.py --instance pr01  --model_name article --sample_type uni_samp
-route: [0, 9, 24, 47, 12, 38, 30, 2, 32, 37, 10, 45, 11, 28, 1, 16, 36, 31, 35, 34, 22, 7, 0]
-total score: 308
-inference time: 173 ms
-```
-using CPU:
-```console
-$ python inference_optw_rl.py --instance pr01  --model_name article --sample_type uni_samp --device cpu
-route: [0, 9, 24, 47, 12, 38, 30, 2, 32, 37, 10, 45, 11, 28, 1, 16, 36, 31, 35, 34, 22, 7, 0]
-total score: 308
-inference time: 1058 ms
-```
+### Installation
 
-* Gavalas' OPTW instance-region t101, trained with correlation sampling of scores:
-```console
-$ python inference_optw_rl.py --instance t101  --model_name article --sample_type corr_samp
-route: [0, 68, 29, 8, 76, 3, 62, 7, 61, 16, 69, 17, 15, 33, 39, 44, 97, 46, 92, 74, 78, 0]
-total score: 399
-inference time: 343 ms
-```
-
-## Setup instructions
-
-0. Install [Anaconda](https://www.anaconda.com/download/) (**Python 3 version**).
-
-1. Clone this repo:
-    ```console
-    $ git clone https://github.com/mustelideos/optw_rl
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/huyngo202/optw-gat.git
+    cd optw-gat
     ```
 
-2. Install the environment:
-    ```console
-    $ cd optw_rl/
-    $ conda env create --file environment.yml
+2.  Create and activate the environment:
+    ```bash
+    conda env create --file environment.yml
+    conda activate optw_env
     ```
 
-3. Activate the environment:
-    ```console
-    $ conda activate optw_env
-    ```
+## Usage
 
-## Inference
-  #### On the Benchmark Instance
-1. Using Beam Search (the default option) for Inference ("model")
-    ```console
-    $ python inference_optw_rl.py --instance t101 --model_name article --sample_type corr_samp
-    route: [0, 68, 29, 8, 76, 3, 62, 7, 61, 16, 69, 17, 15, 33, 39, 44, 97, 46, 92, 74, 78, 0]
-    total score: 399
-    ```
-
-2. Using Active Search followed by Beam Search ("model+as")
-    ```console
-    $ python inference_optw_rl.py --instance t101 --infe_type as_bs --model_name article --sample_type corr_samp
-    route: [0, 68, 29, 8, 76, 3, 62, 7, 61, 24, 46, 97, 47, 16, 69, 17, 15, 21, 95, 92, 74, 0]
-    total score: 400
-    ```
-  #### On the Generated Instances
-0. Make sure to generate the validation set of tourist-region-instances first
-    ```console
-    $ python generate_instances.py --instance t101 --sample_type corr_samp
-    ```
-1. Using Beam Search for Inference ("model")
-    ```console
-    $ python inference_optw_rl.py --instance t101 --model_name article --generated --sample_type corr_samp
-    average total score: 339.16
-    ```
-2. Using Active Search followed by Beam Search ("model+as")
-    ```console
-    $ python inference_optw_rl.py --instance t101 --infe_type as_bs --model_name article --generated --sample_type corr_samp
-    average total score: 340.03
-    ```
-
-## Train a new Model and Infer
-
-0. Make sure to generate the validation set of tourist-region-instances first. These are used to report performance during training.
-      ```console
-      $ python generate_instances.py --instance t101 --sample_type corr_samp
-      ```
-    
-1. Choose a name, how many epochs and how often it is saved
-      ```console
-      $ python train_optw_rl.py --instance t101 --sample_type corr_samp --nepocs 1000 --nsave 1000 --model_name testing_1
-      ```
-
-2. Infer (using Beam Search, for instance) specifying the model name and the (saved) number of epochs
-      ```console
-      $  python inference_optw_rl.py --instance t101  --sample_type corr_samp --model_name testing_1 --saved_model_epoch 1000
-      total score: 376
-      ```
-
-For optional arguments and default values:
-```console
-$ python train_optw_rl.py -h
-(...)
-optional arguments:
-    -h, --help            show this help message and exit
-  --instance INSTANCE   which instance to train on
-  --device DEVICE       device to use (cpu/cuda)
-  --use_checkpoint      use checkpoint (see
-                        https://pytorch.org/docs/stable/checkpoint.html)
-  --sample_type {uni_samp,corr_samp}
-                        how to sample the scores of each point of interest:
-                        uniformly sampled (uni_samp), score proportional to
-                        each point of interest's duration of visit (corr_samp)
-  --model_name MODEL_NAME
-                        model name
-  --debug               debug mode (verbose output and no saving)
-  --nsave NSAVE         saves the model weights every <nsave> epochs
-  --nprint NPRINT       to log and save the training history (total score in
-                        the benchmark and generated instances of the
-                        validation set) every <nprint> epochs
-  --nepocs NEPOCS       number of training epochs
-  --batch_size BATCH_SIZE
-                        training batch size
-  --max_grad_norm MAX_GRAD_NORM
-                        maximum norm value for gradient value clipping
-  --lr LR               initial learning rate
-  --seed SEED           seed random # generators (for reproducibility)
-  --beta BETA           entropy term coefficient
-  --rnn_hidden RNN_HIDDEN
-                        hidden size of RNN
-  --n_layers N_LAYERS   number of attention layers in the encoder
-  --n_heads N_HEADS     number heads in attention layers
-  --ff_dim FF_DIM       hidden dimension of the encoder's feedforward sublayer
-  --nfeatures NFEATURES
-                        number of non-dynamic features
-  --ndfeatures NDFEATURES
-                        number of dynamic features
-```
-## Directory Structure
+### 1. Data Generation
+Generate validation datasets (Simulated User Profiles) to robustly evaluate the model:
 ```bash
-.
-├── data
-│   ├── benchmark
-│   └── generated
-├── images
-├── results
-│   ├── pr01
-│   │   └── model_w
-│   │       └── model_article_uni_samp
-│   └── t101
-│       └── model_w
-│           └── model_article_corr_samp
-└── src
-
+python generate_instances.py --instance c101 --sample_type uni_samp
 ```
+
+### 2. Training
+Train the GAT-Transformer model on specific instances (e.g., `c101`):
+```bash
+# Train GAT-Transformer with REINFORCE
+python train_optw_gat_transformer.py --instance c101 --nepocs 5000 --model_name gat_trans_demo
+```
+
+### 3. Inference & Benchmarking
+Run inference using the trained model with Beam Search:
+
+```bash
+# Run Beam Search inference on Generated Instances
+python benchmark_beam_generated.py
+```
+
+Benchmark against Iterated Local Search (ILS):
+```bash
+# Run ILS benchmark (Metaheuristic baseline)
+python benchmark_ils_generated.py
+```
+
+## Results Summary
+
+Experiments on Solomon (`c101`, `r101`, `rc101`) and Cordeau (`pr01`) benchmarks demonstrate that:
+-   **GAT-Transformer (Beam Search)** achieves valid solutions in sub-second time (<1s), making it ~140x faster than ILS (30s).
+-   **Performance:**
+    -   Competitive with Metaheuristics on Random/Mixed instances (`r101`).
+    -   Outperforms Metaheuristics on large-scale instances (`pr01`) in terms of efficiency.
+    -   Slightly lower reward on strictly Clustered instances (`c101`) compared to intensive search methods, but significantly faster.
+
+## Directory Structure
+-   `src/`: Core implementation (Models, Logic, Utils).
+-   `data/`: Benchmark and Generated datasets.
+-   `results/`: Training logs and model checkpoints.
+-   `report/`: LaTeX source for the thesis report.
+
+## References
+This work builds upon the Pointer Network architecture and the OPTW formulation by [Gama & Fernandes (2021)](https://www.sciencedirect.com/science/article/pii/S0305054821001349).

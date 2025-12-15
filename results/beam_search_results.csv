@@ -1,0 +1,11 @@
+Instance,Model,Beam_Score,Beam_Time_ms
+c101,baseline_bench,320,1463
+c101,transformer_bench,320,1950
+r101,baseline_bench,198,1462
+r101,transformer_bench,198,1736
+rc101,baseline_bench,219,1447
+rc101,transformer_bench,216,2139
+pr01,baseline_bench,299,1108
+pr01,transformer_bench,278,1750
+t101,baseline_bench,318,5447
+t101,transformer_bench,332,7923

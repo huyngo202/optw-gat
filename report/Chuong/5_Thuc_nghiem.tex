@@ -1,8 +1,7 @@
 \documentclass[../DoAn.tex]{subfiles}
 \usepackage{amsmath}
 \usepackage{booktabs}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
+
 
 \begin{document}
 
@@ -19,7 +18,44 @@ Nghiên cứu sử dụng ba bộ dữ liệu chuẩn trong văn học về bài
     \item \textbf{Cordeau:} Tập dữ liệu mở rộng với số lượng điểm lớn hơn và khung thời gian đa dạng (ví dụ: \texttt{pr01}).
 \end{itemize}
 
+
 Mỗi bộ dữ liệu gốc (gọi là \textit{Benchmark Instance}) cung cấp thông tin về tọa độ $(x, y)$, thời gian phục vụ ($d_i$) và khung thời gian mở/đóng cửa ($[O_i, C_i]$) của các địa điểm.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/benchmark_plots/c101.png}
+        \caption{c101 (Clustered)}
+        \label{fig:c101}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/benchmark_plots/r101.png}
+        \caption{r101 (Random)}
+        \label{fig:r101}
+    \end{subfigure}
+    
+    \bigskip
+    
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/benchmark_plots/rc101.png}
+        \caption{rc101 (Random-Clustered)}
+        \label{fig:rc101}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/benchmark_plots/pr01.png}
+        \caption{pr01 (Cordeau)}
+        \label{fig:pr01}
+    \end{subfigure}
+    \caption{Minh họa sự phân bố các địa điểm trên các tập dữ liệu Benchmark.}
+    \label{fig:benchmark_plots}
+\end{figure}
+
 
 \section{Quy trình Sinh Dữ liệu (Generated Instances)}
 \label{sec:data_generation}
@@ -78,7 +114,7 @@ Các mô hình (Baseline, Transformer, GAT-Hybrid) được cài đặt bằng P
         Hidden Dimension ($d_h$) & 128 \\ \hline
         Số đầu Attention ($n_{heads}$) & 8 \\ \hline
         Hệ số Entropy ($\beta$) & 0.01 (Khuyến khích khám phá) \\ \hline
-        Chiến lược Suy diễn & Beam Search (k=128) \\ \hline
+        Chiến lược Suy diễn & Beam Search (k=10) \\ \hline
     \end{tabular}
 \end{table}
 

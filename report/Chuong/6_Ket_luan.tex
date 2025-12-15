@@ -1,41 +1,58 @@
 \documentclass[../DoAn.tex]{subfiles}
 \begin{document}
 
+\lhead{Chương 5. Kết luận}
 
-\lhead{Chương 5. Kết luận} % Thêm tiêu đề cho header trang
+Khóa luận này đã tập trung nghiên cứu và triển khai ứng dụng Học tăng cường sâu (Deep Reinforcement Learning) để giải quyết bài toán tối ưu hóa tổ hợp kinh điển: Bài toán Định hướng có Khung thời gian (OPTW). Trọng tâm của khóa luận là việc đề xuất và đánh giá kiến trúc mạng nơ-ron lai ghép (Hybrid Architecture) kết hợp giữa Graph Attention Network (GAT) và Transformer. Chương này tổng kết các đóng góp chính, nhìn nhận khách quan về các hạn chế và đề xuất hướng nghiên cứu tiếp theo.
 
-Đồ án này đã đi sâu vào việc nghiên cứu và cải tiến một mô hình Học tăng cường sâu nhằm giải quyết hiệu quả Bài toán Orienteering có Cửa sổ Thời gian (OPTW) - một bài toán tối ưu tổ hợp có ý nghĩa quan trọng trong thực tiễn. Chương này sẽ tổng kết lại những kết quả chính đã đạt được, nhìn nhận những hạn chế còn tồn tại và đề xuất các hướng phát triển tiềm năng trong tương lai.
-
-\section{Kết luận}
+\section{Kết luận và Đóng góp}
 \label{sec:conclusion}
 
-Xuyên suốt quá trình thực hiện, đồ án đã giải quyết thành công các mục tiêu đề ra ban đầu. Những kết quả chính đạt được bao gồm:
+Dựa trên quá trình triển khai và kết quả đánh giá thực nghiệm trên các bộ dữ liệu chuẩn (Solomon, Cordeau), khóa luận đã đạt được các kết quả sau:
 
 \begin{enumerate}
-    \item \textbf{Xây dựng thành công mô hình RL cho OPTW:} Đồ án đã triển khai một mô hình Học tăng cường dựa trên kiến trúc Pointer Network, có khả năng học và tự xây dựng các lời giải khả thi cho bài toán OPTW phức tạp. Mô hình baseline sử dụng bộ mã hóa Transformer đã cho thấy khả năng học các chính sách hiệu quả, làm nền tảng vững chắc cho các cải tiến sau này.
+    \item \textbf{Hiện thực hóa hệ thống DRL cho bài toán OPTW:}
+    Khóa luận đã xây dựng thành công một quy trình khép kín từ khâu sinh dữ liệu (Data Generation) mô phỏng hành vi du khách, đến khâu huấn luyện sử dụng thuật toán REINFORCE với Baseline, và cuối cùng là suy diễn bằng chiến lược Beam Search. Hệ thống đã cài đặt và so sánh 4 biến thể kiến trúc: Baseline (LSTM), Transformer thuần, GAT-LSTM và GAT-Transformer.
 
-    \item \textbf{Chứng minh hiệu quả vượt trội của kiến trúc GAT:} Cải tiến cốt lõi của đồ án là việc đề xuất và tích hợp bộ mã hóa Mạng Chú ý Đồ thị (GAT). Qua quá trình đánh giá thực nghiệm trên các bộ dữ liệu benchmark tiêu chuẩn, mô hình GAT đã cho thấy sự vượt trội rõ rệt so với mô hình Transformer. Kết quả cho thấy GAT không chỉ tạo ra các lộ trình có \textbf{tổng lợi nhuận cao hơn} mà còn có \textbf{thời gian suy luận nhanh hơn}. Điều này khẳng định mạnh mẽ luận điểm rằng việc mô hình hóa bài toán dưới dạng đồ thị giúp mô hình nắm bắt tốt hơn cấu trúc và các ràng buộc vốn có, từ đó nâng cao hiệu quả giải quyết.
+    \item \textbf{Đánh giá hiệu quả của kiến trúc GAT-Hybrid:}
+    Kết quả thực nghiệm cho thấy việc tích hợp cơ chế GAT vào bộ mã hóa (Encoder) mang lại những ưu điểm cụ thể:
+    \begin{itemize}
+        \item \textbf{Trên dữ liệu phân bố ngẫu nhiên (r101):} Mô hình \textbf{GAT-LSTM} đạt kết quả tốt nhất, vượt qua cả Transformer và Baseline. Điều này chứng minh giả thuyết rằng cơ chế tổng hợp thông tin láng giềng của GAT giúp mô hình định hướng tốt hơn trong không gian không có cấu trúc cụm rõ ràng.
+        \item \textbf{Trên dữ liệu phân cụm (c101):} Mô hình \textbf{GAT-Transformer} đạt hiệu năng tiệm cận với Baseline và ổn định hơn Transformer thuần túy.
+        \item \textbf{Tính ổn định:} Các mô hình sử dụng GAT thường cho thấy quá trình hội tụ ít dao động hơn so với Transformer thuần, nhờ vào khả năng lọc nhiễu thông qua cấu trúc đồ thị.
+    \end{itemize}
 
-    \item \textbf{Xác nhận giá trị của phương pháp lai (Hybrid Approach):} Đồ án đã đề xuất kết hợp lời giải từ mô hình học sâu với thuật toán tìm kiếm cục bộ 2-Opt. Kết quả thực nghiệm cho thấy bước hậu xử lý này giúp cải thiện một cách nhất quán chất lượng của lời giải cuối cùng. Điều này chứng tỏ tiềm năng của việc kết hợp sức mạnh học biểu diễn của mạng nơ-ron và khả năng tinh chỉnh tối ưu của các thuật toán heuristic cổ điển.
+    \item \textbf{Khả năng tổng quát hóa (Generalization):}
+    Thay vì chỉ học thuộc lòng một bộ dữ liệu cố định, các mô hình trong khóa luận đã chứng minh khả năng giải quyết tốt các bài toán được sinh ngẫu nhiên (generated instances) với các tham số khung thời gian và điểm thưởng thay đổi liên tục. Điều này khẳng định tiềm năng ứng dụng của mô hình vào các bài toán thực tế như thiết kế lịch trình du lịch cá nhân hóa.
 \end{enumerate}
 
-Bên cạnh những thành công đã đạt được, đồ án vẫn còn một số vấn đề tồn đọng. Quá trình huấn luyện các mô hình Học tăng cường đòi hỏi tài nguyên tính toán lớn và thời gian dài để hội tụ. Hơn nữa, mặc dù thuật toán 2-Opt có hiệu quả, nó vẫn là một phương pháp heuristic đơn giản và có thể chưa phải là lựa chọn tốt nhất để tinh chỉnh lời giải trong mọi trường hợp.
+\section{Hạn chế}
+\label{sec:limitations}
+
+Bên cạnh những kết quả tích cực, khóa luận vẫn tồn tại một số hạn chế cần nhìn nhận:
+
+\begin{enumerate}
+    \item \textbf{Hiệu năng trên dữ liệu hỗn hợp:} Trên các tập dữ liệu có cấu trúc phức tạp vừa ngẫu nhiên vừa phân cụm (như \texttt{rc101}), sự cải thiện của mô hình GAT so với Transformer thuần là không đáng kể, thậm chí thấp hơn trong một số trường hợp. Điều này cho thấy kiến trúc lai ghép cần được tinh chỉnh thêm để thích nghi với các phân bố dữ liệu đa dạng.
+    \item \textbf{Khả năng mở rộng (Scalability):} Đối với các tập dữ liệu có quy mô lớn và ràng buộc thời gian phức tạp (như tập \texttt{t101} của Gavalas), quá trình huấn luyện gặp khó khăn trong việc hội tụ. Đây là thách thức chung của Học tăng cường khi không gian trạng thái bùng nổ mà khóa luận chưa giải quyết triệt để.
+    \item \textbf{Thời gian huấn luyện:} Mặc dù thời gian suy diễn rất nhanh (tính bằng mili-giây), nhưng thời gian huấn luyện mô hình vẫn khá lâu, đòi hỏi tài nguyên tính toán lớn.
+\end{enumerate}
 
 \section{Hướng phát triển trong tương lai}
 \label{sec:future_work}
 
-Dựa trên những kết quả và hạn chế của đồ án, một số hướng nghiên cứu và phát triển có thể được thực hiện trong tương lai:
+Để khắc phục các hạn chế trên và nâng cao chất lượng nghiên cứu, một số hướng phát triển tiềm năng được đề xuất bao gồm:
 
 \begin{enumerate}
-    \item \textbf{Mở rộng sang các biến thể phức tạp hơn của bài toán:} Áp dụng và cải tiến mô hình cho các biến thể khác của bài toán định tuyến như VRP với nhiều xe (Multi-vehicle VRP), VRP với khả năng tải trọng (Capacitated VRP), hay các bài toán có ràng buộc động (dynamic constraints) thay đổi theo thời gian thực.
+    \item \textbf{Cải tiến thuật toán huấn luyện:} Thay thế thuật toán REINFORCE cơ bản bằng các thuật toán Actor-Critic tiên tiến hơn như \textbf{PPO (Proximal Policy Optimization)} hoặc \textbf{A3C}. Các thuật toán này có khả năng tận dụng mẫu dữ liệu tốt hơn và giảm phương sai gradient hiệu quả hơn.
     
-    \item \textbf{Nghiên cứu các thuật toán tìm kiếm cục bộ tiên tiến hơn:} Thay vì 2-Opt, có thể tích hợp các thuật toán tìm kiếm cục bộ mạnh mẽ hơn như Large Neighborhood Search (LNS) hay Guided Local Search (GLS). Đặc biệt, có thể xây dựng một mô hình học máy khác để "học" cách chọn toán tử tìm kiếm cục bộ nào là hiệu quả nhất tại một trạng thái nhất định.
-
-    \item \textbf{Cải thiện hiệu quả huấn luyện:} Nghiên cứu các kỹ thuật mới để tăng tốc độ hội tụ và giảm phương sai trong quá trình huấn luyện Policy Gradient, ví dụ như sử dụng các thuật toán Actor-Critic tiên tiến hơn (A2C, A3C, PPO) hoặc các kỹ thuật học ngoại tuyến (Offline RL) để tận dụng các dữ liệu đã có.
+    \item \textbf{Áp dụng Active Search nâng cao:} Tối ưu hóa chiến lược Active Search (tinh chỉnh mô hình ngay lúc suy diễn) để cải thiện kết quả trên các tập dữ liệu khó như \texttt{t101}.
     
-    \item \textbf{Xây dựng một hệ thống hoàn chỉnh và triển khai thực tế:} Tích hợp mô hình đã huấn luyện vào một ứng dụng web hoặc di động hoàn chỉnh, có giao diện trực quan cho phép người dùng nhập dữ liệu bài toán và nhận về lộ trình tối ưu. Việc triển khai trong một môi trường thực tế sẽ giúp đánh giá chính xác hơn hiệu quả và tính ứng dụng của giải pháp.
+    \item \textbf{Học tăng cường đa tác nhân (Multi-Agent RL):} Mở rộng bài toán OPTW cho nhiều tác nhân (Team Orienteering Problem), trong đó các kiến trúc GAT có thể được dùng để mô hình hóa sự phối hợp giữa các tác nhân.
+    
+    \item \textbf{Kết hợp Heuristic vào quá trình học:} Tích hợp các toán tử tìm kiếm cục bộ (như 2-Opt, 3-Opt) trực tiếp vào hàm mất mát hoặc làm một bước hậu xử lý bắt buộc để đảm bảo lời giải luôn đạt tối ưu cục bộ.
 \end{enumerate}
 
-Những hướng phát triển này hứa hẹn sẽ tiếp tục đẩy mạnh giới hạn của việc áp dụng học sâu để giải quyết các bài toán tối ưu tổ hợp, mang lại những giá trị thiết thực cho cả lĩnh vực nghiên cứu và công nghiệp.
+\vspace{0.5cm}
+Tóm lại, khóa luận đã đóng góp một góc nhìn thực nghiệm về việc ứng dụng Graph Neural Networks vào bài toán tối ưu hóa hành trình. Dù còn những thách thức, kết quả đạt được là tiền đề khả quan cho việc phát triển các hệ thống gợi ý lịch trình thông minh trong tương lai.
 
 \end{document}

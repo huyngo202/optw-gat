@@ -46,15 +46,20 @@ Các đặc trưng này được đưa qua một lớp nhúng tuyến tính (Lin
 Khác với các bài toán định tuyến tĩnh (như TSP), bài toán OPTW có trạng thái thay đổi liên tục. Tại mỗi bước ra quyết định, khi tác nhân đang ở vị trí $u$ tại thời điểm $t_{curr}$, hệ thống tính toán lại một tập hợp các đặc trưng động cho mỗi điểm ứng viên $v$:
 
 \begin{itemize}
-    \item \textbf{Nhóm đặc trưng liên quan đến thời gian hiện tại:}
+    \item \textbf{Nhóm 1: Đặc trưng tương đối với thời gian hiện tại ($t_{curr}$):}
     \begin{enumerate}
         \item Thời gian chờ đến khi mở cửa: $(O_v - t_{curr}) / T_{max}$.
         \item Thời gian còn lại đến khi đóng cửa: $(C_v - t_{curr}) / T_{max}$.
-        \item Thời gian di chuyển từ vị trí hiện tại: $(T_{travel}(u, v)) / T_{max}$.
-        \item Tỷ lệ thời gian đã trôi qua của toàn bộ hành trình.
+        \item Thời gian còn lại của Service Time hoặc đại lượng liên quan tại node: $(ArrivalIndex_v - t_{curr}) / T_{max}$.
+        \item Tỷ lệ thời gian đã trôi qua của tour: $(t_{curr} - T_{start}) / T_{max}$.
     \end{enumerate}
-    \item \textbf{Nhóm đặc trưng liên quan đến thời gian dự kiến đến nơi:}
-    Tương tự như nhóm trên, nhưng các giá trị được tính dựa trên thời điểm dự kiến tác nhân sẽ đến đỉnh $v$ ($t_{arrival} = t_{curr} + T_{travel}(u, v)$).
+    \item \textbf{Nhóm 2: Đặc trưng tương đối với thời gian dự kiến đến nơi ($t_{arrival} = t_{curr} + \Delta_{uv}$):}
+    \begin{enumerate}
+        \item Thời gian từ lúc xuất phát đến khi đến nơi: $(t_{arrival} - T_{start}) / T_{max}$.
+        \item Thời gian đến sớm hơn giờ mở cửa: $(O_v - t_{arrival}) / T_{max}$.
+        \item Thời gian dư trước giờ đóng cửa: $(C_v - t_{arrival}) / T_{max}$.
+        \item Thời gian Service Time so với thời gian đến: $(ArrivalIndex_v - t_{arrival}) / T_{max}$.
+    \end{enumerate}
 \end{itemize}
 Việc cập nhật liên tục các đặc trưng này giúp mạng nơ-ron "nhận thức" được sự trôi đi của thời gian và mức độ khẩn cấp (urgency) của từng điểm đến, từ đó đưa ra quyết định cân bằng giữa điểm thưởng và chi phí thời gian.
 
@@ -125,6 +130,31 @@ Trong giai đoạn kiểm thử (Inference), thay vì chỉ sử dụng phương
     \item \textbf{Beam Search:} Tại mỗi bước giải mã, thuật toán duy trì $k$ chuỗi lời giải tiềm năng nhất (với $k$ thường được chọn là 128). Điều này mở rộng không gian tìm kiếm và tăng xác suất tìm được lời giải tốt hơn.
     \item \textbf{Active Search:} Đây là chiến lược tinh chỉnh (fine-tuning) tại thời điểm suy diễn. Với mỗi bộ dữ liệu kiểm thử cụ thể, mô hình sẽ được huấn luyện thêm một số bước nhỏ trên chính dữ liệu đó trước khi thực hiện Beam Search. Điều này cho phép các tham số của mô hình thích nghi tốt hơn với đặc điểm phân bố dữ liệu riêng biệt của từng trường hợp cụ thể.
 \end{enumerate}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwData{Coordinates $X$, Service Times $D$, Time Windows $[O, C]$, Scores $S$, Beam Width $k$}
+\KwResult{Best Route $\pi^*$}
+ \textbf{Initialize:} Beam $B_0 = \{(\text{depot}, \text{score}=0, t=0)\}$; \\
+ \For{step $t = 1 \dots N$}{
+  $Candidates \leftarrow \emptyset$\;
+  \For{each hypothesis $h \in B_{t-1}$}{
+    Update dynamic features for current state $h$\;
+    Compute Mask $M$: Check Time Windows, Lookahead, Visited\;
+    Compute Probabilities $P$ using GAT-Transformer Policy excluding masked nodes\;
+    Select top $k$ next nodes based on $P$\;
+    Add extended hypotheses to $Candidates$\;
+  }
+  $B_t \leftarrow$ Select top $k$ hypotheses from $Candidates$ with highest cumulative score\;
+  \If{all hypotheses in $B_t$ are finished}{
+   \textbf{break}\;
+  }
+ }
+ $\pi^* \leftarrow$ Hypothesis in $B_t$ with max score\;
+ \caption{Quy trình Suy diễn Beam Search có kiểm soát ràng buộc (Feasibility Masking)}
+ \label{alg:beam_search}
+\end{algorithm}
+
 
 \vspace{1cm}
 \textbf{Tổng kết chương}

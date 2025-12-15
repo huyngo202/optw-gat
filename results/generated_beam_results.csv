@@ -1,0 +1,4 @@
+Instance,Model,Beam_Score,Beam_Time_ms
+c101,gat_transformer_bench,263.97,650
+r101,gat_transformer_bench,114.0,206
+pr01,gat_transformer_bench,190.02,773

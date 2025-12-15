@@ -20,28 +20,40 @@ Cho một đồ thị đầy đủ $G = (V, E)$, trong đó $V = \{v_1, ..., v_n
 
 Giả sử $v_1$ là điểm xuất phát và $v_n$ là điểm kết thúc. Thời gian di chuyển giữa hai đỉnh $v_i$ và $v_j$ được ký hiệu là $\Delta_{ij}$. Mục tiêu là tìm một lộ trình (một chuỗi các đỉnh) $R = (\pi_1, \pi_2, ..., \pi_m)$ bắt đầu tại $v_1$ và kết thúc tại $v_n$ sao cho tổng điểm thưởng là lớn nhất, đồng thời thỏa mãn các ràng buộc về thời gian.
 
-Quy trình xây dựng lộ trình diễn ra tuần tự. Tại mỗi bước, nếu chọn di chuyển từ đỉnh hiện tại $v_i$ sang đỉnh $v_j$, các ràng buộc sau phải được thỏa mãn:
+Để biểu diễn bài toán dưới dạng mô hình toán học chặt chẽ, chúng tôi sử dụng mô hình Quy hoạch Nguyên tuyến tính (Mixed Integer Linear Programming - MILP).
 
-\begin{equation}
-    a_j + \text{wait}_j \leq C_j
-\end{equation}
-\begin{equation}
-    a_j + \text{wait}_j + D_j + \Delta_{jn} \leq T_{end}
-\end{equation}
+    Đặt $N = \{1, ..., n\}$ là tập các địa điểm khách hàng, $0$ và $n+1$ lần lượt là điểm xuất phát và kết thúc (cùng tọa độ với depot). Tập đỉnh là $V = N \cup \{0, n+1\}$.
 
-Trong đó:
-\begin{itemize}
-    \item $a_j$: Thời gian đến đỉnh $v_j$.
-    \item $\text{wait}_j = \max(0, O_j - a_j)$: Thời gian chờ nếu đến sớm hơn giờ mở cửa.
-    \item $T_{end}$: Thời gian giới hạn của toàn bộ chuyến đi (thời gian đóng cửa của điểm kết thúc $v_n$).
-\end{itemize}
+    \textbf{Biến quyết định:}
+    \begin{itemize}
+        \item $x_{ij} \in \{0, 1\}$: Biến nhị phân, bằng 1 nếu di chuyển trực tiếp từ đỉnh $i$ đến $j$, 0 nếu ngược lại.
+        \item $y_i \in \{0, 1\}$: Biến nhị phân, bằng 1 nếu đỉnh $i$ được ghé thăm.
+        \item $a_i \in \mathbb{R}^+$: Thời điểm bắt đầu phục vụ tại đỉnh $i$.
+    \end{itemize}
 
-Mục tiêu là tối đa hóa hàm mục tiêu:
-\begin{equation}
-    \max \sum_{v_k \in R} S_k
-\end{equation}
+    \textbf{Hàm mục tiêu:} Tối đa hóa tổng điểm thưởng thu được:
+    \begin{equation}
+        \text{Maximize } \sum_{i \in N} S_i y_i
+    \end{equation}
 
-\input{optw_illustration}
+    \textbf{Các ràng buộc:}
+    \begin{align}
+        \sum_{j \in V \setminus \{0\}} x_{0j} &= 1 \label{eq:start} \\
+        \sum_{i \in V \setminus \{n+1\}} x_{i, n+1} &= 1 \label{eq:end} \\
+        \sum_{i \in V \setminus \{k\}} x_{ik} &= \sum_{j \in V \setminus \{k\}} x_{kj} = y_k, \quad \forall k \in N \label{eq:flow} \\
+        a_i + D_i + \Delta_{ij} - M(1 - x_{ij}) &\leq a_j, \quad \forall i, j \in V \label{eq:time_prop} \\
+        O_i \leq a_i &\leq C_i, \quad \forall i \in V \label{eq:time_window} \\
+        a_{n+1} &\leq T_{max} \label{eq:max_time}
+    \end{align}
+
+    Trong đó:
+    \begin{itemize}
+        \item Ràng buộc (\ref{eq:start}) và (\ref{eq:end}) đảm bảo lộ trình bắt đầu tại $0$ và kết thúc tại $n+1$.
+        \item Ràng buộc (\ref{eq:flow}) đảm bảo tính liên thông của dòng chảy (flow conservation): nếu đi vào một đỉnh thì phải đi ra khỏi đỉnh đó, trừ phi đỉnh đó không được ghé thăm ($y_k=0$).
+        \item Ràng buộc (\ref{eq:time_prop}) quy định thời gian đến đỉnh tiếp theo (loại bỏ chu trình con), với $M$ là một hằng số dương đủ lớn.
+        \item Ràng buộc (\ref{eq:time_window}) và (\ref{eq:max_time}) đảm bảo tuân thủ khung thời gian và tổng ngân sách thời gian.
+    \end{itemize}
+
 
 \section{Học tăng cường cho Tối ưu hóa Tổ hợp}
 
@@ -57,7 +69,21 @@ Bài toán được ánh xạ sang MDP với các thành phần:
 \end{itemize}
 
 \subsection{Thuật toán REINFORCE với Baseline}
-Chúng ta huấn luyện một mạng nơ-ron có tham số $\theta$ để học một chính sách ngẫu nhiên (stochastic policy) $p_\theta(\pi | s)$. Mục tiêu là tối đa hóa kỳ vọng tổng phần thưởng $J(\theta) = \mathbb{E}_{\pi \sim p_\theta}[R(\pi)]$ \cite{sutskever2014sequence}.
+    Mục tiêu là tối đa hóa kỳ vọng tổng phần thưởng:
+    \begin{equation}
+        J(\theta) = \mathbb{E}_{\pi \sim p_\theta}[R(\pi)] = \sum_{\pi} p_\theta(\pi) R(\pi)
+    \end{equation}
+    
+    Để tối ưu hóa $J(\theta)$ bằng phương pháp Gradient Ascent, ta cần tính đạo hàm $\nabla_\theta J(\theta)$. Dựa trên định lý Gradient Chính sách (Policy Gradient Theorem), ta có chuỗi biến đổi sau:
+    \begin{align}
+        \nabla_\theta J(\theta) &= \nabla_\theta \sum_{\pi} p_\theta(\pi) R(\pi) \\
+        &= \sum_{\pi} \nabla_\theta p_\theta(\pi) R(\pi) \\
+        &= \sum_{\pi} p_\theta(\pi) \frac{\nabla_\theta p_\theta(\pi)}{p_\theta(\pi)} R(\pi) \quad (\text{Quy tắc log-derivative}) \\
+        &= \sum_{\pi} p_\theta(\pi) \nabla_\theta \log p_\theta(\pi) R(\pi) \\
+        &= \mathbb{E}_{\pi \sim p_\theta} \left[ R(\pi) \nabla_\theta \log p_\theta(\pi) \right]
+    \end{align}
+    
+    Quy tắc log-derivative ($\nabla x = x \cdot \nabla \log x$) cho phép ta chuyển bài toán từ tính đạo hàm của xác suất sang tính kỳ vọng của gradient log-xác suất, điều này rất thuận lợi cho việc ước lượng bằng phương pháp Monte Carlo (lấy mẫu).
 
 Gradient của hàm mục tiêu được xấp xỉ bằng thuật toán REINFORCE \cite{bello2016neural}:
 \begin{equation}
